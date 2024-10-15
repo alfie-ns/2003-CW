@@ -90,3 +90,5 @@ else
     echo "Error: Failed to commit changes..." >&2
     exit 1
 fi
+
+# End of Script --------------------------------------------
