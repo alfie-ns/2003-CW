@@ -12,7 +12,7 @@ print_bold() {
 # Function to run the server
 run_server() {
     print_bold "Running the server...\n"
-    python manage.py runserver
+    python3 manage.py runserver || print_bold "Failed to run the server" # if command fails print message
     #python manage.py runserver 0.0.0.0:8000
 }
 
