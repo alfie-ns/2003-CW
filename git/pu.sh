@@ -9,6 +9,17 @@ print_bold() {
     echo -e "\033[1m$1\033[0m"
 }
 
+# Function to pull changes from remote
+pull_changes() {
+    print_bold "\nPulling changes from remote..."
+    if git pull origin main; then
+        print_bold "Successfully pulled changes from remote."
+    else
+        print_bold "Failed to pull changes. Please resolve conflicts manually."
+        exit 1
+    fi
+}
+
 # Function to get commit importance and custom message
 get_commit_details() {
     local importance_text
@@ -61,6 +72,9 @@ selective_add() {
 }
 
 # Main Execution --------------------------------------------
+
+# 0. Pull changes from remote
+pull_changes
 
 # 1. Selectively add changes
 selective_add
