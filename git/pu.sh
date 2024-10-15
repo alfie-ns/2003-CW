@@ -88,15 +88,15 @@ commit_message=$(get_commit_details)
 if git commit -m "$commit_message"; then
     echo "Changes committed successfully" >&2
     if git push origin main; then
-        echo -e '\nLocal repo pushed to remote origin\n' >&2
+        print_bold '\nLocal repo pushed to remote origin\n' >&2
         print_bold "Commit message: $commit_message" >&2
         exit 0
     else
-        echo "Error: Failed to push to remote..." >&2
+        print_bold "\nError: Failed to push to remote...\n">&2
         exit 1
     fi
 else
-    echo "Error: Failed to commit changes..." >&2
+    print_bold "\nError: Failed to commit changes...\n">&2
     exit 1
 fi
 
