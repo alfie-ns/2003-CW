@@ -1,12 +1,12 @@
-Casino Simulator - Group 41
+# 🎰 Casino Simulator - Group 41 🎰
 
-## Team Members:
+## Team Members
 
 - Harrison Buck (Games Development)
 - Morgan McGovern (Games Development)
 - Alfie Nurse (Artificial Intelligence)
 
-## Start-up Idea:
+## Start-up Idea 
 
 **Casino Simulator** is a semi open-world simulation game where the user starts with an empty casino and a small amount of cash. The player can:
 
@@ -17,12 +17,12 @@ Casino Simulator - Group 41
 
 The player's goal is to gain more money and expand the size of the casino. There will be no story mode, but a small tutorial will be included to guide players. The game will be rated **18+** due to its gambling elements.
 
-## Development Focus:
+## Development Focus
 
 - **Morgan McGovern & Harrison Buck**: Focus on the main game development and mechanics.
 - **Alfie Nurse**: Focus on AI and algorithm development to control NPC behaviour and game mechanics.
 
-## ⚠️ DANGEROUS COMMANDS ⚠️
+## DANGEROUS COMMANDS
 
-- git reset --hard HEAD
-- git clean -f -d
+- `git reset --hard HEAD`
+- `git clean -f -d`
