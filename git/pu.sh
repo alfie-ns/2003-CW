@@ -10,10 +10,10 @@ print_bold() {
 }
 
 # Function to pull changes from remote
-pull_changes() {
-    print_bold "\nPulling changes from remote..."
-    bash git/pull.sh
-}
+#pull_changes() {
+#    print_bold "\nPulling changes from remote..."
+#    bash git/pull.sh
+#}
 
 # Function to get commit importance and custom message
 get_commit_details() {
@@ -69,7 +69,7 @@ selective_add() {
 # Main Execution --------------------------------------------
 
 # 0. Pull changes from remote;
-pull_changes
+git pull origin main
 
 # 1. Selectively add changes;
 selective_add
