@@ -24,12 +24,13 @@ migrate() {
 # Main function ---------------------------------------------------------------
 main() {
     if migrate; then
-        print_bold "\nMigrations successful\n"
+        print_bold "\nMigrations successful. Running the server...\n"
+        run_server
     else
         print_bold "\nMigrations failed\n"
         exit 1
     fi
-    run_server
+    
 }
 
 main
