@@ -6,7 +6,7 @@
 - Morgan McGovern (Games Development)
 - Alfie Nurse (Artificial Intelligence)
 
-## Start-up Idea 
+## Start-up Idea
 
 **Casino Simulator** is a semi open-world simulation game where the user starts with an empty casino and a small amount of cash. The player can:
 
@@ -21,6 +21,11 @@ The player's goal is to gain more money and expand the size of the casino. There
 
 - **Morgan McGovern & Harrison Buck**: Focus on the main game development and mechanics.
 - **Alfie Nurse**: Focus on AI and algorithm development to control NPC behaviour and game mechanics.
+
+## Development Notes
+
+- When you use the pu.sh script, you can just do `./git/pu.sh` in the root directory
+- The pu.sh script automatically pulls latest changes from main branch before pushing local changes
 
 ## DANGEROUS COMMANDS
 
