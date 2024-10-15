@@ -20,7 +20,7 @@ get_commit_details() {
     local importance_text
     while true; do
         echo -n "Enter the importance (1-5): " >&2
-        read -rsn1 importance
+        read -rsn1 importance # read a single character immediately/silently
         echo >&2
 
         case $importance in
