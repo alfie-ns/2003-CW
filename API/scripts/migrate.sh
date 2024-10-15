@@ -19,7 +19,7 @@ migrate() {
     python manage.py migrate
 }
 
-# Main function ---------------------------------------------------------------
+# Main function
 main() {
     if make_migrations; then
         migrate
@@ -30,5 +30,5 @@ main() {
     
 }
 
-# Execute main function -------------------------------------------------------
+# Execute main function
 main

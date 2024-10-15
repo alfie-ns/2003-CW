@@ -21,7 +21,7 @@ migrate() {
     bash ../scripts/migrate.sh
 }
 
-# Main function ---------------------------------------------------------------
+# Main function 
 main() {
     if migrate; then
         print_bold "\nMigrations successful. Running the server...\n"
