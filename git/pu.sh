@@ -37,14 +37,14 @@ get_commit_details() {
     read custom_message
     echo >&2
 
-    echo "${importance_text}: ${custom_message}"
+    echo "${importance_text}: ${custom_message}" # return value to git commit message
 }
 
 # Function to selectively add files to staging
 selective_add() {
     print_bold "\nUnstaged changes:"
     git status --porcelain | grep -E '^\s*[\?M]' | sed 's/^...//'
-    # the above command lists all untracked and modified files;
+    # the above command lists all untracked and modified files.
     # untracked(?) and modified(M); the final sed command removes
     # the first three characters which are the status flags.
     while true; do
@@ -66,7 +66,7 @@ selective_add() {
     done
 }
 
-# Main Execution --------------------------------------------
+# Main Execution
 
 # 0. Pull changes from remote;
 git pull origin main
@@ -100,4 +100,4 @@ else
     exit 1
 fi
 
-# End of Script --------------------------------------------
+# End of Script
