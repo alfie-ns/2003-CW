@@ -12,12 +12,7 @@ print_bold() {
 # Function to pull changes from remote
 pull_changes() {
     print_bold "\nPulling changes from remote..."
-    if git pull origin main; then
-        print_bold "Successfully pulled changes from remote."
-    else
-        print_bold "Failed to pull changes. Please resolve conflicts manually."
-        exit 1
-    fi
+    bash git/pull.sh
 }
 
 # Function to get commit importance and custom message
@@ -73,13 +68,13 @@ selective_add() {
 
 # Main Execution --------------------------------------------
 
-# 0. Pull changes from remote
+# 0. Pull changes from remote;
 pull_changes
 
-# 1. Selectively add changes
+# 1. Selectively add changes;
 selective_add
 
-# 2. Get commit importance and custom message
+# 2. Get commit importance and custom message;
 print_bold "\nCommit importance:" >&2
 echo "1. Trivial" >&2
 echo "2. Minor" >&2
