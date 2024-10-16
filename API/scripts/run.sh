@@ -43,7 +43,6 @@ main() {
         print_bold "\nMigrations failed\n"
         exit 1
     fi
-    
 }
 
 main
