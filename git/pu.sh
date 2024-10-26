@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Git Commit Importance Script
+# Git Commit Importance Script: Created by Alfie Nurse
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
