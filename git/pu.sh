@@ -65,11 +65,6 @@ selective_add() {
 
 # Main Execution --------------------------------------------
 
-# Reset to previous commit
-print_bold "\nResetting to previous commit..."
-git reset HEAD^
-echo "Reset complete"
-
 # 1. Selectively add changes
 selective_add
 
