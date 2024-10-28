@@ -1,26 +1,23 @@
 #!/bin/bash
 
-# Git Commit Importance Script: Created by Alfie Nurse
+# Git Commit Importance Script
+# - I made made this script over the summer holidays for my other git projects: alfie-ns
+# - 'read -e' enables command-line editing (arrow keys, etc.)
+# - '>&2' is used to redirect output to stderr thus only echoing the importance and custom message to the commit
 
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit immediately if a command exits with a non-zero status; this'll prevent an error being committed
 
 # Function to print bold text
 print_bold() {
     echo -e "\033[1m$1\033[0m"
 }
 
-# Function to pull changes from remote
-#pull_changes() {
-#    print_bold "\nPulling changes from remote..."
-#    bash git/pull.sh
-#}
-
 # Function to get commit importance and custom message
 get_commit_details() {
     local importance_text
     while true; do
         echo -n "Enter the importance (1-5): " >&2
-        read -rsn1 importance # read a single character immediately/silently
+        read -n1 importance
         echo >&2
 
         case $importance in
@@ -34,22 +31,22 @@ get_commit_details() {
     done
 
     echo -n "Enter a custom message for the commit: " >&2
-    read custom_message
+    read -e custom_message
     echo >&2
 
-    echo "${importance_text}: ${custom_message}" # return value to git commit message
+    echo "${importance_text}: ${custom_message}"
 }
 
 # Function to selectively add files to staging
 selective_add() {
     print_bold "\nUnstaged changes:"
     git status --porcelain | grep -E '^\s*[\?M]' | sed 's/^...//'
-    # the above command lists all untracked and modified files.
+    # the above command lists all untracked and modified files;
     # untracked(?) and modified(M); the final sed command removes
     # the first three characters which are the status flags.
     while true; do
         echo -n "Enter file/directory to add, 'all' (or 'done' to finish): "
-        read item
+        read -e item
 
         if [ "$item" = "done" ]; then
             break
@@ -66,15 +63,17 @@ selective_add() {
     done
 }
 
-# Main Execution
+# Main Execution --------------------------------------------
 
-# 0. Pull changes from remote;
-git pull origin main
+# Reset to previous commit
+print_bold "\nResetting to previous commit..."
+git reset HEAD^
+echo "Reset complete"
 
-# 1. Selectively add changes;
+# 1. Selectively add changes
 selective_add
 
-# 2. Get commit importance and custom message;
+# 2. Get commit importance and custom message
 print_bold "\nCommit importance:" >&2
 echo "1. Trivial" >&2
 echo "2. Minor" >&2
@@ -83,21 +82,18 @@ echo "4. Significant" >&2
 echo -e "5. Milestone\n" >&2
 commit_message=$(get_commit_details)
 
-
 # 3. Commit and push changes
 if git commit -m "$commit_message"; then
     echo "Changes committed successfully" >&2
     if git push origin main; then
-        print_bold '\nLocal repo pushed to remote origin\n' >&2
+        echo -e '\nLocal repo pushed to remote origin\n' >&2
         print_bold "Commit message: $commit_message" >&2
-        exit 0
+        exit 0 #success
     else
-        print_bold "\nError: Failed to push to remote...\n">&2
-        exit 1
+        echo "Error: Failed to push to remote..." >&2
+        exit 1 #failure
     fi
 else
-    print_bold "\nError: Failed to commit changes...\n">&2
+    echo "Error: Failed to commit changes..." >&2
     exit 1
 fi
-
-# End of Script
