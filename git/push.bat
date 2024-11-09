@@ -9,6 +9,9 @@ setlocal EnableDelayedExpansion
 set "BOLD=[1m"
 set "RESET=[0m"
 
+:: initially pull from remote to ensure up-to-date
+git pull origin main || goto :error
+
 :: main execution starts here
 call :selective_add
 call :print_bold "Commit importance:"

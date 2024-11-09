@@ -79,6 +79,9 @@ review_changes() {
 }
 
 # Main Execution --------------------------------------------
+# 0. Initially pull changes from remote
+git pull origin main
+
 # 1. Selectively add changes
 selective_add
 
