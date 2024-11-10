@@ -26,6 +26,7 @@ The player's goal is to gain more money and expand the size of the casino. There
 
 - When you use the pu.sh script, you can just do `./git/pu.sh` in the root directory
 - The pu.sh script automatically pulls latest changes from main branch before pushing local changes
+- There's also a push.bat script; just run 'push' in git/
 
 ## DANGEROUS COMMANDS
 
