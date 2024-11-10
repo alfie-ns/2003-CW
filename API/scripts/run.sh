@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Django Server-Run Script: Created by Alfie Nurse
+# Django Server-Run Script
 
 # Function to print bold text
 print_bold() {
