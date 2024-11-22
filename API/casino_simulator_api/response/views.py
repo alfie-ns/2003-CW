@@ -2,10 +2,10 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import GameSession, AIResponse
-from .services import OpenAIService
+#from .services import OpenAIService
 from .serializers import GameSessionSerializer, AIResponseSerializer
 
-class GameSessionViewSet(viewsets.ModelViewSet):
+class CasinAI(viewsets.ModelViewSet):
     queryset = GameSession.objects.all()
     serializer_class = GameSessionSerializer
     
