@@ -10,3 +10,5 @@ class AIResponse(models.Model):
     prompt = models.TextField()
     response = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+
+

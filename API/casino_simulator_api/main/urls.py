@@ -1,11 +1,8 @@
-from rest_framework.routers import DefaultRouter
 from django.contrib import admin
-from django.urls import path, include
-from response.views import CasinAI
-
-router = DefaultRouter()
-router.register(r'sessions', CasinAI)
+from django.urls import path
+from response.views import AIResponseView
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('admin/', admin.site.urls),  # Django admin interface
+    path('api/sessions/<uuid:pk>/response/', AIResponseView.as_view(), name='ai-response'),  # AI response endpoint
 ]
