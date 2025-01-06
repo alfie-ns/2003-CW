@@ -284,46 +284,17 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        // Create a 3x3 grid of symbols
-        string[,] grid = new string[3, 3];
+        // Create an array to store the symbols
+        string[] landedSymbols = new string[3];
         for (int i = 0; i < 3; i++)
         {
-            for (int j = 0; j < 3; j++)
-            {
-                float angle = rollers[i * 3 + j].transform.rotation.eulerAngles.y;
-                int symbolIndex = Mathf.RoundToInt(angle / (360.0f / symbols.Length)) % symbols.Length;
-                grid[i, j] = symbols[symbolIndex];
-            }
+            float angle = rollers[i].transform.rotation.eulerAngles.y;
+            int symbolIndex = Mathf.RoundToInt(angle / (360.0f / symbols.Length)) % symbols.Length;
+            landedSymbols[i] = symbols[symbolIndex];
         }
 
-        // Check rows and columns for a win
-        bool isWin = false;
-        for (int i = 0; i < 3; i++)
-        {
-            if (grid[i, 0] == grid[i, 1] && grid[i, 1] == grid[i, 2])
-            {
-                isWin = true;
-                break;
-            }
-            if (grid[0, i] == grid[1, i] && grid[1, i] == grid[2, i])
-            {
-                isWin = true;
-                break;
-            }
-        }
-
-        // Check diagonals for a win
-        if (!isWin)
-        {
-            if (grid[0, 0] == grid[1, 1] && grid[1, 1] == grid[2, 2])
-            {
-                isWin = true;
-            }
-            else if (grid[0, 2] == grid[1, 1] && grid[1, 1] == grid[2, 0])
-            {
-                isWin = true;
-            }
-        }
+        // Check for a win (all symbols in the array are the same)
+        bool isWin = landedSymbols[0] == landedSymbols[1] && landedSymbols[1] == landedSymbols[2];
 
         if (isWin)
         {
