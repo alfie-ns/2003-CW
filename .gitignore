@@ -1,6 +1,7 @@
 **/venv/
 **.DS_Store
 **__pycache__/
+**.env
 
 
 # '**' means anywhere in the directory tree
