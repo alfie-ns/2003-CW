@@ -2,40 +2,46 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
 from .models import GameSession
+from decouple import config
 import openai
+import os
+
+# Ensure your OpenAI API key is set in your environment variables
+openai.api_key = config("OPENAI_API_KEY")
 
 class AIResponseView(APIView):
-
     def get_object(self, pk):
         try:
             return GameSession.objects.get(pk=pk)
         except GameSession.DoesNotExist:
             raise NotFound("GameSession not found")
 
-    def ai_response(self, request, pk=None):
-        # retrieve the session object
+    def post(self, request, pk=None):
+        print(f"OpenAI API Key: {openai.api_key}") # debug to confirm the API key is set
+        # Retrieve the session object
         session = self.get_object(pk)
 
-        # extract the prompt from the request
-        prompt = request.data.get('prompt')
+        # Extract the prompt from the request
+        prompt = request.data.get("prompt")
         if not prompt:
-            return Response({'error': 'Prompt is required'}, status=400)
+            return Response({"error": "Prompt is required"}, status=400)
 
-        # call OpenAI API to generate the response
+        # Call OpenAI API to generate the response
         try:
-            openai_response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
+            response = openai.chat.completions.create(
+                model="gpt-4o-mini", 
                 messages=[
-                    {"role": "system", "content": f"todo..."},
+                    {"role": "system", "content": "You are assisting with a game simulation."},
                     {"role": "user", "content": prompt}
                 ]
             )
-            response = openai_response.choices[0].message.content # extract text from the response
+            ai_response = response.choices[0].message.content  # Extract text from OpenAI response
         except Exception as e:
-            return Response({'error': f"OpenAI API error: {str(e)}"}, status=500)
+            return Response({"error": f"OpenAI API error: {str(e)}"}, status=500)
 
-        # return the AI response
+        # Return the AI response
         return Response({
-            'response': response,
-            'session_id': session.session_id
+            "response": ai_response,
+            "session_id": session.session_id,
+            "game_state": session.game_state
         })

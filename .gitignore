@@ -1,7 +1,33 @@
+# Python-specific ignore rules
 **/venv/
 **.DS_Store
 **__pycache__/
 **.env
 
+# Unity-specific ignore rules
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
 
-# '**' means anywhere in the directory tree
+# Visual Studio / rider
+.vscode/
+*.csproj
+*.sln
+*.suo
+
+# generated files
+*.pidb
+*.booproj
+*.svd
+
+# packagecache
+**/[Pp]ackage[Cc]ache/
+
+# os-specific files
+.DS_Store
+Thumbs.db
