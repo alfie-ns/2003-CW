@@ -28,6 +28,6 @@ MemoryCaptures/
 # packagecache
 **/[Pp]ackage[Cc]ache/
 
-# os-specific files
+# OS-specific files
 .DS_Store
 Thumbs.db

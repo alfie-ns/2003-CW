@@ -1,5 +1,0 @@
-sceneSetups:
-- path: Assets/Casino_Environment_Pack/Scene/Casino.unity
-  isLoaded: 1
-  isActive: 1
-  isSubScene: 0
