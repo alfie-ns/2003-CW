@@ -1,71 +1,158 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class Roulette : MonoBehaviour
 {
+    [Header("UI Elements")]
     public Text resultText;
-    public Button spinButton;
-    public Dropdown betTypeDropdown;
-    public InputField betAmountInput;
+    public Text countdownText;
+    public Text currentBetText;
+    
+    [Header("Betting")]
+    public Button[] chipButtons; // Assign 1,2,5,10,25,50,100 value buttons in inspector
+    public Transform rouletteBoardTransform; // Parent transform of betting spots
+    public float spinTime = 60f; // Time until wheel spins
 
-    private int betAmount;
-    private string betType;
+    private int selectedChipValue;
+    private float timeUntilSpin;
+    private Dictionary<string, int> currentBets = new Dictionary<string, int>();
+    private bool bettingOpen = true;
 
     void Start()
     {
-        spinButton.onClick.AddListener(Spin);
+        timeUntilSpin = spinTime;
+        SetupChipButtons();
+    }
+
+    void SetupChipButtons()
+    {
+        int[] chipValues = { 1, 2, 5, 10, 25, 50, 100 };
+        
+        for (int i = 0; i < chipButtons.Length; i++)
+        {
+            int value = chipValues[i];
+            chipButtons[i].onClick.AddListener(() => SelectChipValue(value));
+        }
     }
 
     void Update()
     {
-        // Update bet amount and type from UI
-        int.TryParse(betAmountInput.text, out betAmount);
-        betType = betTypeDropdown.options[betTypeDropdown.value].text;
+        if (bettingOpen)
+        {
+            UpdateTimer();
+        }
+    }
+
+    void UpdateTimer()
+    {
+        timeUntilSpin -= Time.deltaTime;
+        countdownText.text = $"Time until spin: {Mathf.CeilToInt(timeUntilSpin)}s";
+
+        if (timeUntilSpin <= 0)
+        {
+            bettingOpen = false;
+            Spin();
+        }
+    }
+
+    public void SelectChipValue(int value)
+    {
+        if (!bettingOpen) return;
+        selectedChipValue = value;
+    }
+
+    public void PlaceBet(string betSpot)
+    {
+        if (!bettingOpen || selectedChipValue <= 0) return;
+
+        // Add bet to current bets
+        if (currentBets.ContainsKey(betSpot))
+            currentBets[betSpot] += selectedChipValue;
+        else
+            currentBets[betSpot] = selectedChipValue;
+
+        UpdateBetDisplay();
+    }
+
+    void UpdateBetDisplay()
+    {
+        string betDisplay = "Current Bets:\n";
+        foreach (var bet in currentBets)
+        {
+            betDisplay += $"{bet.Key}: ${bet.Value}\n";
+        }
+        currentBetText.text = betDisplay;
     }
 
     private void Spin()
     {
         // Simulate spinning the roulette wheel
-        int result = Random.Range(0, 37); // 0-36 for European roulette
+        int result = Random.Range(0, 37);
+        resultText.text = "Result: " + result.ToString();
 
-        // Display the result
-        resultText.text = "Result: " + result;
-
-        // Check if the player wins
-        bool isWin = CheckWin(result);
-
-        // Display win/lose message
-        if (isWin)
+        // Process all current bets
+        int totalWinnings = 0;
+        foreach (var bet in currentBets)
         {
-            resultText.text += "\nYou win!";
+            if (CheckWin(result, bet.Key))
+            {
+                totalWinnings += CalculateWinnings(bet.Key, bet.Value);
+            }
         }
-        else
+
+        // Display results
+        resultText.text += $"\nTotal Winnings: ${totalWinnings}";
+        
+        // Reset for next round
+        ResetGame();
+    }
+
+    private int CalculateWinnings(string betType, int betAmount)
+    {
+        // Return multiplier based on bet type
+        switch (betType)
         {
-            resultText.text += "\nYou lose!";
+            case "Single Number": return betAmount * 35;
+            case "Red":
+            case "Black":
+            case "Odd":
+            case "Even":
+            case "1-18":
+            case "19-36": return betAmount * 2;
+            case "1st 12":
+            case "2nd 12":
+            case "3rd 12": return betAmount * 3;
+            default: return 0;
         }
     }
 
-    private bool CheckWin(int result)
+    private void ResetGame()
+    {
+        timeUntilSpin = spinTime;
+        currentBets.Clear();
+        selectedChipValue = 0;
+        bettingOpen = true;
+        UpdateBetDisplay();
+    }
+
+    private bool CheckWin(int result, string betType)
     {
         switch (betType)
         {
-            case "Red":
-                return IsRed(result);
-            case "Black":
-                return IsBlack(result);
-            case "Odd":
-                return result % 2 != 0;
-            case "Even":
-                return result % 2 == 0;
-            case "1-18":
-                return result >= 1 && result <= 18;
-            case "19-36":
-                return result >= 19 && result <= 36;
-            case "Single Number":
-                return result == int.Parse(betAmountInput.text);
+            case "Red": return IsRed(result);
+            case "Black": return IsBlack(result);
+            case "Odd": return result % 2 != 0 && result != 0;
+            case "Even": return result % 2 == 0 && result != 0;
+            case "1-18": return result >= 1 && result <= 18;
+            case "19-36": return result >= 19 && result <= 36;
+            case "1st 12": return result >= 1 && result <= 12;
+            case "2nd 12": return result >= 13 && result <= 24;
+            case "3rd 12": return result >= 25 && result <= 36;
             default:
+                // Check if it's a single number bet
+                if (int.TryParse(betType, out int betNumber))
+                    return result == betNumber;
                 return false;
         }
     }
