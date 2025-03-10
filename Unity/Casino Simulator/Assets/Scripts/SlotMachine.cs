@@ -6,32 +6,35 @@ using UnityEngine.EventSystems;
 
 public class SlotMachine : MonoBehaviour, IPointerClickHandler
 {
+    // Configuration for betting limits and auto-spin options
     public int minBet = 1;
     public int maxBet = 10;
     public int[] autoSpinOptions = { 10, 25, 50, 100, 200, 500 };
 
-    public Text betAmountText; // Assign in the Inspector
-    public GameObject increaseBetButton; // Assign in the Inspector
-    public GameObject decreaseBetButton; // Assign in the Inspector
-    public GameObject autoSpinButton; // Assign in the Inspector
-    public GameObject startAutoSpinButton; // Assign in the Inspector
-    public GameObject stopAutoSpinButton; // Assign in the Inspector
-    public GameObject lever; // Assign in the Inspector
-    public GameObject[] rollers; // Assign in the Inspector
-    public Text resultText; // Assign in the Inspector
-    public Text interactionText; // Assign in the Inspector
-    public Text autoSpinText; // Assign in the Inspector
-    public Text exitText; // Assign in the Inspector
-    public Text amountText; // Assign in the Inspector
-    public Text autoText; // Assign in the Inspector
+    // UI References for buttons, text displays and game objects
+    [Header("UI Elements")]
+    public Text betAmountText; // Shows current bet amount
+    public GameObject increaseBetButton; // Button to increase bet
+    public GameObject decreaseBetButton; // Button to decrease bet
+    public GameObject autoSpinButton; // Button to cycle through auto-spin options
+    public GameObject startAutoSpinButton;
+    public GameObject stopAutoSpinButton;
+    public GameObject lever; // Physical lever player pulls to spin
+    public GameObject[] rollers; // The spinning reels of the slot machine
+    public Text resultText; // Displays win/lose outcome
+    public Text interactionText; // Shows interaction prompts
+    public Text autoSpinText;
+    public Text exitText;
+    public Text amountText;
+    public Text autoText;
 
-    private int betAmount;
-    private int autoSpinsRemaining;
-    private bool isSpinning;
-    private float[] stopTimes;
-    private string[] symbols = { "Bar", "Seven", "Bell", "Cherry" };
-    private int currentAutoSpinIndex = 0;
-    private bool isInteracting = false;
+    private int betAmount; // Current bet amount
+    private int autoSpinsRemaining; // Number of automatic spins left
+    private bool isSpinning; // Whether reels are currently spinning
+    private float[] stopTimes; // When each roller should stop spinning
+    private string[] symbols = { "Bar", "Seven", "Bell", "Cherry" }; // Possible symbols on rollers
+    private int currentAutoSpinIndex = 0; // Index into autoSpinOptions array
+    private bool isInteracting = false; // Whether player is currently using machine
     private FirstPersonMovement playerMovement;
     private Transform playerTransform;
     private BoxCollider slotMachineCollider;
@@ -89,8 +92,11 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         }
     }
 
+    // Player interaction logic
     private void CheckLookingAtMachine()
     {
+        // Check if player is within range and looking at machine
+        // Enable/disable interaction prompts accordingly
         if (Vector3.Distance(playerTransform.position, transform.position) <= 2f)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -217,8 +223,13 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         StartCoroutine(SpinSlots());
     }
 
+    // Spinning mechanics
     private IEnumerator SpinSlots()
     {
+        // Main slot machine spinning logic
+        // - Spins each roller independently
+        // - Checks for winning combinations when all rollers stop
+        // - Updates UI with results
         Debug.Log("SpinSlots coroutine started");
 
         while (isSpinning)
@@ -278,6 +289,9 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
 
     private void CheckWin()
     {
+        // Get final symbols from roller positions
+        // Check if all symbols match for a win
+        // Update UI and trigger win/lose effects
         if (rollers == null || rollers.Length == 0)
         {
             Debug.LogError("rollers array is not initialized or empty.");
@@ -317,8 +331,13 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         resultText.text = "";
     }
 
+    // UI Event handling
     public void OnPointerClick(PointerEventData eventData)
     {
+        // Handles clicks on various UI elements:
+        // - Bet amount adjustment
+        // - Auto-spin controls
+        // - Lever pull to start spin
         if (isInteracting)
         {
             GameObject clickedObject = eventData.pointerCurrentRaycast.gameObject;

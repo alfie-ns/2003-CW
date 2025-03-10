@@ -3,9 +3,12 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 
+// This class implements a Blackjack game in Unity, handling all game logic and UI interactions
 public class Blackjack : MonoBehaviour
 {
+    // UI references for displaying game state (hands, balance, bet amount, results)
     [Header("UI Elements")]
+    // Other UI elements
     public Text playerHandText;
     public Text dealerHandText;
     public Text balanceText;
@@ -30,6 +33,7 @@ public class Blackjack : MonoBehaviour
     private bool isPlayerTurn;
     private bool isSplitHand;
 
+    // Card class to represent individual cards
     private class Card
     {
         public string Suit { get; set; }
@@ -42,8 +46,10 @@ public class Blackjack : MonoBehaviour
         }
     }
 
+    // Initializes the game on startup
     void Start()
     {
+        // Setup initial game state and UI
         InitializeChipButtons();
         SetupButtons();
         ResetGame();
@@ -145,8 +151,10 @@ public class Blackjack : MonoBehaviour
         return card;
     }
 
+    // Handles player actions (Hit, Stand, Split)
     void Hit()
     {
+        // Adds a card to current hand and checks for bust
         if (!isPlayerTurn) return;
 
         List<Card> currentHand = isSplitHand ? splitHand : playerHand;
@@ -169,6 +177,7 @@ public class Blackjack : MonoBehaviour
 
     void Stand()
     {
+        // Ends player turn and triggers dealer's turn
         if (!isPlayerTurn) return;
 
         if (isSplitHand && GetHandValue(playerHand) <= 21)
@@ -184,6 +193,7 @@ public class Blackjack : MonoBehaviour
 
     void Split()
     {
+        // Creates two hands from a pair, doubles the bet
         if (!canSplit || currentBet * 2 > playerBalance + currentBet) return;
 
         splitHand = new List<Card> { playerHand[1] };
@@ -215,8 +225,10 @@ public class Blackjack : MonoBehaviour
         UpdateUI();
     }
 
+    // Calculates the total value of a hand, handling Aces as 1 or 11
     int GetHandValue(List<Card> hand)
     {
+        // Special handling for Aces: initially count as 11, can reduce to 1 if would bust
         int value = 0;
         int aces = 0;
 
@@ -242,8 +254,11 @@ public class Blackjack : MonoBehaviour
         return value;
     }
 
+    // Determines the winner between dealer and player hands
     void DetermineWinner()
     {
+        // Compares hand values and updates balance/UI based on who won
+        // Handles both main hand and split hand if it exists
         int dealerValue = GetHandValue(dealerHand);
         int playerValue = GetHandValue(playerHand);
         int splitValue = splitHand != null ? GetHandValue(splitHand) : 0;
@@ -289,8 +304,10 @@ public class Blackjack : MonoBehaviour
         currentBet = 0;
     }
 
+    // Special handling for when player gets Blackjack (21 on initial deal)
     void ProcessBlackjack()
     {
+        // Pays out at 3:2 odds (2.5x bet)
         playerBalance += (int)(currentBet * 2.5f);
         resultText.text = "Blackjack!";
         currentBet = 0;
@@ -313,8 +330,11 @@ public class Blackjack : MonoBehaviour
         splitButton.interactable = interactable && canSplit;
     }
 
+    // Updates all UI elements with current game state
     void UpdateUI()
     {
+        // Updates text displays for hands, balance, bet, etc.
+        // Hides dealer's hole card during player's turn
         balanceText.text = $"Balance: ${playerBalance}";
         betText.text = $"Current Bet: ${currentBet}";
         
