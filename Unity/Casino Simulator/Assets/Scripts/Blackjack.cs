@@ -1,151 +1,346 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
+using System.Linq;
 
 public class Blackjack : MonoBehaviour
 {
+    [Header("UI Elements")]
     public Text playerHandText;
     public Text dealerHandText;
+    public Text balanceText;
+    public Text betText;
     public Text resultText;
+    
+    [Header("Buttons")]
+    public Button[] chipButtons; // 1,5,10,25,100 value buttons
+    public Button dealButton;
     public Button hitButton;
     public Button standButton;
-    public Button dealButton;
-    public InputField betAmountInput;
+    public Button splitButton;
+    public Button clearBetButton;
 
-    private List<int> playerHand;
-    private List<int> dealerHand;
-    private int betAmount;
+    private List<Card> deck;
+    private List<Card> playerHand;
+    private List<Card> dealerHand;
+    private List<Card> splitHand;
+    private int currentBet;
+    private int playerBalance = 1000;
+    private bool canSplit;
     private bool isPlayerTurn;
+    private bool isSplitHand;
+
+    private class Card
+    {
+        public string Suit { get; set; }
+        public string Rank { get; set; }
+        public int Value { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Rank} of {Suit}";
+        }
+    }
 
     void Start()
     {
+        InitializeChipButtons();
+        SetupButtons();
+        ResetGame();
+        UpdateUI();
+    }
+
+    void InitializeChipButtons()
+    {
+        int[] chipValues = { 1, 5, 10, 25, 100 };
+        for (int i = 0; i < chipButtons.Length; i++)
+        {
+            int value = chipValues[i];
+            chipButtons[i].onClick.AddListener(() => AddToBet(value));
+        }
+    }
+
+    void SetupButtons()
+    {
+        dealButton.onClick.AddListener(Deal);
         hitButton.onClick.AddListener(Hit);
         standButton.onClick.AddListener(Stand);
-        dealButton.onClick.AddListener(Deal);
-        ResetGame();
+        splitButton.onClick.AddListener(Split);
+        clearBetButton.onClick.AddListener(ClearBet);
+        
+        SetGameButtonsInteractable(false);
     }
 
-    void Update()
+    void InitializeDeck()
     {
-        // Update bet amount from UI
-        int.TryParse(betAmountInput.text, out betAmount);
-    }
+        deck = new List<Card>();
+        string[] suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+        string[] ranks = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 
-    private void Deal()
-    {
-        ResetGame();
-        playerHand.Add(DrawCard());
-        playerHand.Add(DrawCard());
-        dealerHand.Add(DrawCard());
-        dealerHand.Add(DrawCard());
-
-        UpdateHandText();
-        isPlayerTurn = true;
-        resultText.text = "Your turn!";
-    }
-
-    private void Hit()
-    {
-        if (isPlayerTurn)
+        foreach (string suit in suits)
         {
-            playerHand.Add(DrawCard());
-            UpdateHandText();
-
-            if (GetHandValue(playerHand) > 21)
+            for (int i = 0; i < ranks.Length; i++)
             {
-                resultText.text = "Bust! You lose!";
-                isPlayerTurn = false;
+                int value = i + 1;
+                if (value > 10) value = 10;
+                deck.Add(new Card { Suit = suit, Rank = ranks[i], Value = value });
             }
         }
+
+        // Shuffle deck
+        deck = deck.OrderBy(x => Random.value).ToList();
     }
 
-    private void Stand()
+    void AddToBet(int amount)
     {
-        if (isPlayerTurn)
+        if (playerBalance >= amount)
         {
-            isPlayerTurn = false;
-            DealerTurn();
+            currentBet += amount;
+            playerBalance -= amount;
+            UpdateUI();
         }
     }
 
-    private void DealerTurn()
+    void ClearBet()
+    {
+        playerBalance += currentBet;
+        currentBet = 0;
+        UpdateUI();
+    }
+
+    void Deal()
+    {
+        if (currentBet <= 0) return;
+
+        InitializeDeck();
+        playerHand = new List<Card>();
+        dealerHand = new List<Card>();
+        splitHand = null;
+
+        // Deal initial cards
+        playerHand.Add(DrawCard());
+        dealerHand.Add(DrawCard());
+        playerHand.Add(DrawCard());
+        dealerHand.Add(DrawCard());
+
+        canSplit = playerHand[0].Value == playerHand[1].Value;
+        splitButton.interactable = canSplit;
+        
+        isPlayerTurn = true;
+        SetGameButtonsInteractable(true);
+        dealButton.interactable = false;
+        UpdateUI();
+
+        if (GetHandValue(playerHand) == 21)
+        {
+            ProcessBlackjack();
+        }
+    }
+
+    Card DrawCard()
+    {
+        if (deck.Count == 0) return null;
+        Card card = deck[0];
+        deck.RemoveAt(0);
+        return card;
+    }
+
+    void Hit()
+    {
+        if (!isPlayerTurn) return;
+
+        List<Card> currentHand = isSplitHand ? splitHand : playerHand;
+        currentHand.Add(DrawCard());
+
+        if (GetHandValue(currentHand) > 21)
+        {
+            if (isSplitHand && GetHandValue(playerHand) <= 21)
+            {
+                isSplitHand = false;
+            }
+            else
+            {
+                ProcessBust();
+            }
+        }
+
+        UpdateUI();
+    }
+
+    void Stand()
+    {
+        if (!isPlayerTurn) return;
+
+        if (isSplitHand && GetHandValue(playerHand) <= 21)
+        {
+            isSplitHand = false;
+            UpdateUI();
+            return;
+        }
+
+        isPlayerTurn = false;
+        PlayDealerTurn();
+    }
+
+    void Split()
+    {
+        if (!canSplit || currentBet * 2 > playerBalance + currentBet) return;
+
+        splitHand = new List<Card> { playerHand[1] };
+        playerHand.RemoveAt(1);
+        
+        playerBalance -= currentBet;
+        currentBet *= 2;
+
+        playerHand.Add(DrawCard());
+        splitHand.Add(DrawCard());
+
+        isSplitHand = true;
+        canSplit = false;
+        splitButton.interactable = false;
+        
+        UpdateUI();
+    }
+
+    void PlayDealerTurn()
     {
         while (GetHandValue(dealerHand) < 17)
         {
             dealerHand.Add(DrawCard());
         }
 
-        UpdateHandText();
         DetermineWinner();
+        SetGameButtonsInteractable(false);
+        dealButton.interactable = true;
+        UpdateUI();
     }
 
-    private void DetermineWinner()
-    {
-        int playerValue = GetHandValue(playerHand);
-        int dealerValue = GetHandValue(dealerHand);
-
-        if (dealerValue > 21 || playerValue > dealerValue)
-        {
-            resultText.text = "You win!";
-        }
-        else if (playerValue == dealerValue)
-        {
-            resultText.text = "Push!";
-        }
-        else
-        {
-            resultText.text = "You lose!";
-        }
-    }
-
-    private int DrawCard()
-    {
-        return Random.Range(1, 12); // Simplified card draw (1-11)
-    }
-
-    private int GetHandValue(List<int> hand)
+    int GetHandValue(List<Card> hand)
     {
         int value = 0;
-        int aceCount = 0;
+        int aces = 0;
 
-        foreach (int card in hand)
+        foreach (Card card in hand)
         {
-            if (card == 1)
+            if (card.Rank == "A")
             {
-                aceCount++;
+                aces++;
                 value += 11;
-            }
-            else if (card > 10)
-            {
-                value += 10;
             }
             else
             {
-                value += card;
+                value += card.Value;
             }
         }
 
-        while (value > 21 && aceCount > 0)
+        while (value > 21 && aces > 0)
         {
             value -= 10;
-            aceCount--;
+            aces--;
         }
 
         return value;
     }
 
-    private void UpdateHandText()
+    void DetermineWinner()
     {
-        playerHandText.text = "Player Hand: " + string.Join(", ", playerHand) + " (Value: " + GetHandValue(playerHand) + ")";
-        dealerHandText.text = "Dealer Hand: " + string.Join(", ", dealerHand) + " (Value: " + GetHandValue(dealerHand) + ")";
+        int dealerValue = GetHandValue(dealerHand);
+        int playerValue = GetHandValue(playerHand);
+        int splitValue = splitHand != null ? GetHandValue(splitHand) : 0;
+
+        // Process main hand
+        if (playerValue <= 21)
+        {
+            if (dealerValue > 21 || playerValue > dealerValue)
+            {
+                playerBalance += currentBet * 2;
+                resultText.text = "Win!";
+            }
+            else if (playerValue == dealerValue)
+            {
+                playerBalance += currentBet;
+                resultText.text = "Push";
+            }
+            else
+            {
+                resultText.text = "Lose";
+            }
+        }
+
+        // Process split hand if it exists
+        if (splitHand != null && splitValue <= 21)
+        {
+            if (dealerValue > 21 || splitValue > dealerValue)
+            {
+                playerBalance += currentBet * 2;
+                resultText.text += " Split: Win!";
+            }
+            else if (splitValue == dealerValue)
+            {
+                playerBalance += currentBet;
+                resultText.text += " Split: Push";
+            }
+            else
+            {
+                resultText.text += " Split: Lose";
+            }
+        }
+
+        currentBet = 0;
     }
 
-    private void ResetGame()
+    void ProcessBlackjack()
     {
-        playerHand = new List<int>();
-        dealerHand = new List<int>();
+        playerBalance += (int)(currentBet * 2.5f);
+        resultText.text = "Blackjack!";
+        currentBet = 0;
+        SetGameButtonsInteractable(false);
+        dealButton.interactable = true;
+    }
+
+    void ProcessBust()
+    {
+        resultText.text = "Bust!";
+        currentBet = 0;
+        SetGameButtonsInteractable(false);
+        dealButton.interactable = true;
+    }
+
+    void SetGameButtonsInteractable(bool interactable)
+    {
+        hitButton.interactable = interactable;
+        standButton.interactable = interactable;
+        splitButton.interactable = interactable && canSplit;
+    }
+
+    void UpdateUI()
+    {
+        balanceText.text = $"Balance: ${playerBalance}";
+        betText.text = $"Current Bet: ${currentBet}";
+        
+        playerHandText.text = "Player Hand: " + string.Join(", ", playerHand) + 
+            $" (Value: {GetHandValue(playerHand)})";
+        
+        if (splitHand != null)
+        {
+            playerHandText.text += "\nSplit Hand: " + string.Join(", ", splitHand) + 
+                $" (Value: {GetHandValue(splitHand)})";
+        }
+
+        dealerHandText.text = "Dealer Hand: " + 
+            (isPlayerTurn ? dealerHand[0].ToString() + ", ?" : string.Join(", ", dealerHand)) +
+            (isPlayerTurn ? "" : $" (Value: {GetHandValue(dealerHand)})");
+    }
+
+    void ResetGame()
+    {
+        playerHand = new List<Card>();
+        dealerHand = new List<Card>();
+        splitHand = null;
         resultText.text = "";
-        UpdateHandText();
+        isPlayerTurn = false;
+        isSplitHand = false;
+        canSplit = false;
+        UpdateUI();
     }
 }
