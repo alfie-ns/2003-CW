@@ -2,22 +2,23 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
+// Main class that handles the roulette game mechanics and UI
 public class Roulette : MonoBehaviour
 {
     [Header("UI Elements")]
-    public Text resultText;
-    public Text countdownText;
-    public Text currentBetText;
+    public Text resultText; // Displays the result of the spin and winnings
+    public Text countdownText; // Shows countdown until next spin
+    public Text currentBetText; // Displays all current bets
     
     [Header("Betting")]
-    public Button[] chipButtons; // Assign 1,2,5,10,25,50,100 value buttons in inspector
-    public Transform rouletteBoardTransform; // Parent transform of betting spots
-    public float spinTime = 60f; // Time until wheel spins
+    public Button[] chipButtons; // Array of buttons representing different chip denominations (1,2,5,10,25,50,100)
+    public Transform rouletteBoardTransform; // Reference to the game board where betting spots are placed
+    public float spinTime = 60f; // Duration of betting round in seconds
 
-    private int selectedChipValue;
-    private float timeUntilSpin;
-    private Dictionary<string, int> currentBets = new Dictionary<string, int>();
-    private bool bettingOpen = true;
+    private int selectedChipValue; // Tracks the currently selected chip value for betting
+    private float timeUntilSpin; // Countdown timer
+    private Dictionary<string, int> currentBets = new Dictionary<string, int>(); // Stores all active bets as betType:amount pairs (e.g. "Red":100)
+    private bool bettingOpen = true; // Controls if players can place bets
 
     void Start()
     {
@@ -108,9 +109,13 @@ public class Roulette : MonoBehaviour
         ResetGame();
     }
 
+    // Processes bet results and calculates winnings based on bet type
     private int CalculateWinnings(string betType, int betAmount)
     {
-        // Return multiplier based on bet type
+        // Multipliers based on standard roulette rules:
+        // Single number (35:1)
+        // Red/Black/Odd/Even/1-18/19-36 (2:1)
+        // Dozens (3:1)
         switch (betType)
         {
             case "Single Number": return betAmount * 35;
@@ -136,8 +141,15 @@ public class Roulette : MonoBehaviour
         UpdateBetDisplay();
     }
 
+    // Validates if a bet wins based on the spin result
     private bool CheckWin(int result, string betType)
     {
+        // Handles all roulette bet types:
+        // - Colors (Red/Black)
+        // - Odd/Even
+        // - Number ranges (1-18, 19-36)
+        // - Dozens (1st 12, 2nd 12, 3rd 12)
+        // - Single numbers
         switch (betType)
         {
             case "Red": return IsRed(result);
@@ -157,12 +169,14 @@ public class Roulette : MonoBehaviour
         }
     }
 
+    // Standard roulette wheel red numbers
     private bool IsRed(int number)
     {
         int[] redNumbers = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
         return System.Array.IndexOf(redNumbers, number) >= 0;
     }
 
+    // Standard roulette wheel black numbers
     private bool IsBlack(int number)
     {
         int[] blackNumbers = { 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 };
