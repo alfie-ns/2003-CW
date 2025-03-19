@@ -5,7 +5,7 @@
 
 ### Morgan
 
-- [ ] Wait for me i.e. Morgan to get the NPCs working
+- [ ] Wait for Morgan to get the NPCs working
 - [ ] The AI will control the decision making for the NPC characters that play the games. What games they decide to play based on their current money and what is available to them. All decisions will be smart decisions done by the AI using the API instead of random ones based on RNG.
 - [ ] Locally is fine for now
 - [ ] No player login
