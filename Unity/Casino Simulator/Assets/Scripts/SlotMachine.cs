@@ -3,23 +3,29 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using TMPro;
 
 public class SlotMachine : MonoBehaviour, IPointerClickHandler
 {
+    // Enum definition needs to be outside of any attribute
+    public enum PositionDirection { Left, Right, Forward, Back, Custom }
+
     // Configuration for betting limits and auto-spin options
     public int minBet = 1;
-    public int maxBet = 10;
+    public int maxBet = 100;
     public int[] autoSpinOptions = { 10, 25, 50, 100, 200, 500 };
+    private int[] predefinedBets = { 1, 2, 5, 10, 25, 50, 100 };
+    private int currentBetIndex = 0;
 
-    // UI References for buttons, text displays and game objects
+    // UI References for GameObjects and text displays
     [Header("UI Elements")]
     public Text betAmountText; // Shows current bet amount
-    public GameObject increaseBetButton; // Button to increase bet
-    public GameObject decreaseBetButton; // Button to decrease bet
-    public GameObject autoSpinButton; // Button to cycle through auto-spin options
+    public GameObject increaseBetButton; // GameObject to increase bet
+    public GameObject decreaseBetButton; // GameObject to decrease bet
+    public GameObject autoSpinButton; // GameObject to cycle through auto-spin options
     public GameObject startAutoSpinButton;
     public GameObject stopAutoSpinButton;
-    public GameObject lever; // Physical lever player pulls to spin
+    public GameObject leverObject; // GameObject for the lever
     public GameObject[] rollers; // The spinning reels of the slot machine
     public Text resultText; // Displays win/lose outcome
     public Text interactionText; // Shows interaction prompts
@@ -27,6 +33,24 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     public Text exitText;
     public Text amountText;
     public Text autoText;
+    public TMP_Text balanceText; // Shows current balance
+    public GameObject slotMachineUIParent; // Parent object containing all UI elements
+
+    [Header("Game Interaction")]
+    public float interactionRange = 2f;
+    public GameObject playerObject;
+
+    [Header("Balance Management")]
+    public MonoBehaviour balanceManagerObject; // Reference to the object with IBalanceManager implementation
+    private IBalanceManager balanceManager;
+
+    [Header("Automatic Positioning")]
+    public PositionDirection positionDirection = PositionDirection.Right;
+    public float standDistance = 1.2f;
+
+    [Header("Player Positioning")]
+    public Transform playerStandPoint; // Empty GameObject child you'll place where the player should stand
+    public bool useCustomStandPoint = false; // Toggle to use either automatic or manual positioning
 
     private int betAmount; // Current bet amount
     private int autoSpinsRemaining; // Number of automatic spins left
@@ -34,239 +58,614 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     private float[] stopTimes; // When each roller should stop spinning
     private string[] symbols = { "Bar", "Seven", "Bell", "Cherry" }; // Possible symbols on rollers
     private int currentAutoSpinIndex = 0; // Index into autoSpinOptions array
-    private bool isInteracting = false; // Whether player is currently using machine
-    private FirstPersonMovement playerMovement;
-    private Transform playerTransform;
-    private BoxCollider slotMachineCollider;
-
+    private bool isPlayingSlotMachine = false; // Whether player is currently using machine
+    
+    private Vector3 savedPlayerPosition;
+    private Quaternion savedPlayerRotation;
+    private CharacterController playerController;
+    private FirstPersonController playerMovementController;
+    private FirstPersonLook firstPersonLook;
+    private bool canStartNextSpin = true;
+    
     void Start()
     {
+        // Initialize bet amount to minimum bet
         betAmount = minBet;
         UpdateBetAmountText();
         UpdateAutoSpinButtonText();
-        interactionText.text = "Press E to interact";
-        exitText.text = "";
-        SetUIElementsActive(false);
-
-        playerMovement = FindObjectOfType<FirstPersonMovement>();
-        playerTransform = playerMovement.transform;
-        slotMachineCollider = GetComponent<BoxCollider>();
+    
+        // Get the balance manager
+        if (balanceManagerObject != null)
+        {
+            balanceManager = balanceManagerObject as IBalanceManager;
+            if (balanceManager == null)
+            {
+                Debug.LogError("Balance Manager object found but doesn't implement IBalanceManager interface!");
+            }
+            else
+            {
+                Debug.Log("Balance Manager successfully initialized");
+            }
+        }
+        else
+        {
+            Debug.LogError("Balance Manager object not assigned in inspector!");
+        }
+    
+        // Disable UI at start
+        if (slotMachineUIParent != null)
+            slotMachineUIParent.SetActive(false);
+    }
+    void Awake()
+    {
+        // Disable SlotMachine UI at start
+        if (slotMachineUIParent != null)
+            slotMachineUIParent.SetActive(false);
     }
 
     void Update()
     {
-        if (isInteracting)
+        if (!isPlayingSlotMachine && Input.GetKeyDown(KeyCode.E))
         {
-            if (autoSpinsRemaining > 0 && !isSpinning)
+            // First check if player is in range
+            float distance = Vector3.Distance(playerObject.transform.position, transform.position);
+            
+            if (distance <= interactionRange)
             {
-                StartSpin();
-                autoSpinsRemaining--;
-            }
-
-            if (Input.GetKeyDown(KeyCode.C))
-            {
-                ExitInteraction();
-            }
-        }
-        else
-        {
-            CheckLookingAtMachine();
-        }
-
-        // Detect mouse click
-        if (Input.GetMouseButtonDown(0)) // Left mouse button
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit))
-            {
-                GameObject clickedObject = hit.collider.gameObject;
-                PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
+                // Then check if player is looking at the slot machine
+                Camera playerCamera = playerObject.GetComponentInChildren<Camera>();
+                if (playerCamera != null)
                 {
-                    pointerCurrentRaycast = new RaycastResult { gameObject = clickedObject }
-                };
-
-                OnPointerClick(pointerEventData);
-            }
-        }
-    }
-
-    // Player interaction logic
-    private void CheckLookingAtMachine()
-    {
-        // Check if player is within range and looking at machine
-        // Enable/disable interaction prompts accordingly
-        if (Vector3.Distance(playerTransform.position, transform.position) <= 2f)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit))
-            {
-                if (hit.collider.gameObject == gameObject)
-                {
-                    interactionText.enabled = true;
-                    if (Input.GetKeyDown(KeyCode.E))
+                    RaycastHit hit;
+                    if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, interactionRange))
                     {
-                        StartInteraction();
+                        // Check if the object hit is this slot machine
+                        if (hit.transform == transform || hit.transform.IsChildOf(transform))
+                        {
+                            Debug.Log("Player is looking at the slot machine");
+                            StartSlotMachine();
+                        }
+                        else
+                        {
+                            Debug.Log("Player is looking at " + hit.transform.name + " but not the slot machine");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("Player is not looking at anything within interaction range");
                     }
                 }
                 else
                 {
-                    interactionText.enabled = false;
+                    Debug.LogError("No camera found on player object. Add fallback behavior here.");
+                    
+                    // Fallback if no camera is found - just check if player is facing the table
+                    Vector3 directionToSlotMachine = transform.position - playerObject.transform.position;
+                    directionToSlotMachine.y = 0; // Ignore height difference
+                    
+                    // Get forward direction of player
+                    Vector3 playerForward = playerObject.transform.forward;
+                    playerForward.y = 0; // Ignore height difference
+                    
+                    // Check if player is roughly facing the slot machine (dot product > 0.5 means < 60 degree angle)
+                    if (Vector3.Dot(playerForward.normalized, directionToSlotMachine.normalized) > 0.5f)
+                    {
+                        Debug.Log("Player is facing the slot machine (fallback check)");
+                        StartSlotMachine();
+                    }
+                    else
+                    {
+                        Debug.Log("Player is not facing the slot machine");
+                    }
                 }
+            }
+        }
+        else if (isPlayingSlotMachine && Input.GetKeyDown(KeyCode.Escape))
+        {
+            ExitSlotMachine();
+        }
+        
+        if (isPlayingSlotMachine && !isSpinning && autoSpinsRemaining > 0 && canStartNextSpin)
+        {
+            // Temporarily prevent more spins until delay completes
+            canStartNextSpin = false;
+        
+            // Start a coroutine to handle the delay
+            StartCoroutine(DelayedAutoSpin());
+        }
+            if (isPlayingSlotMachine && !isSpinning && Input.GetMouseButtonDown(0))
+        {
+            // First check if we're clicking on a UI element using EventSystem
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                // Handled by the OnPointerClick method via EventSystem
+                Debug.Log("Clicked on UI element - will be handled by EventSystem");
+                return;
+            }
+        
+            // If not UI, try a 3D raycast for the lever or other 3D elements
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogError("Main camera not found!");
+                return;
+            }
+        
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit[] hits = Physics.RaycastAll(ray, 100f); // Get all hits, not just the first one
+        
+            Debug.Log($"Raycast hit {hits.Length} objects");
+        
+            // Sort hits by distance to get closest first
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        
+            // Process all hits to find interactive elements
+            foreach (RaycastHit hit in hits)
+            {
+                GameObject hitObject = hit.collider.gameObject;
+                Debug.Log($"Hit: {hitObject.name} at distance {hit.distance}");
+            
+                // Check if this is one of our interactive elements
+                if (hitObject == leverObject)
+                {
+                    StartSpin();
+                    Debug.Log("Clicked lever");
+                    break; // Exit the loop once we've handled a click
+                }
+                else if (hitObject == increaseBetButton)
+                {
+                    IncreaseBet();
+                    Debug.Log("Clicked increase bet button");
+                    break;
+                }
+                else if (hitObject == decreaseBetButton)
+                {
+                    DecreaseBet();
+                    Debug.Log("Clicked decrease bet button");
+                    break;
+                }
+                else if (hitObject == autoSpinButton)
+                {
+                    CycleAutoSpinOption();
+                    Debug.Log("Clicked auto spin button");
+                    break;
+                }
+                else if (hitObject == startAutoSpinButton)
+                {
+                    StartAutoSpins();
+                    Debug.Log("Clicked start auto spin button");
+                    break;
+                }
+                else if (hitObject == stopAutoSpinButton)
+                {
+                    StopAutoSpins();
+                    Debug.Log("Clicked stop auto spin button");
+                    break;
+                }
+            }
+        }
+    }
+
+    void StartSlotMachine()
+    {
+        isPlayingSlotMachine = true;
+        canStartNextSpin = true;
+    
+        // Reset the bet amount to minimum when starting
+        currentBetIndex = 0; // Set to first bet option (1)
+        betAmount = predefinedBets[currentBetIndex];
+        UpdateBetAmountText();
+        Debug.Log("Bet amount set to: " + betAmount + " (should be " + predefinedBets[0] + ")");
+    
+        // Update the balance display - KEEP THIS SEPARATE FROM BET AMOUNT
+        UpdateBalanceDisplay();
+
+            // Find and disable the Blackjack UI first
+            GameObject blackjackUI = GameObject.Find("blackjackUIParent");
+            if (blackjackUI != null)
+            {
+                blackjackUI.SetActive(false);
+                Debug.Log("Blackjack UI disabled");
+            }
+
+            // Get and disable player components first
+            playerController = playerObject.GetComponent<CharacterController>();
+            playerMovementController = playerObject.GetComponent<FirstPersonController>();
+            firstPersonLook = playerObject.GetComponentInChildren<FirstPersonLook>();
+
+            // Save player's position and rotation
+            savedPlayerPosition = playerObject.transform.position;
+            savedPlayerRotation = playerObject.transform.rotation;
+
+            // Disable movement but let camera look work
+            if (playerController != null) playerController.enabled = false;
+            if (playerMovementController != null) playerMovementController.enabled = false;
+        
+            // IMPROVED: Use the designated player stand point if available
+            if (playerStandPoint != null)
+            {
+                // Move player to the designated position
+                playerObject.transform.position = playerStandPoint.position;
+            
+                // Calculate the direction from the player to the slot machine
+                Vector3 lookDirection = transform.position - playerStandPoint.position;
+                lookDirection.y = 0; // Keep the look direction level (no looking up/down)
+            
+                // Make the player face the slot machine
+                if (lookDirection != Vector3.zero)
+                {
+                    playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+                    Debug.Log($"Player looking at slot machine from position: {playerStandPoint.position} to machine: {transform.position}");
+                }
+                else
+                {
+                    // Fall back to using the stand point's rotation if calculation fails
+                    playerObject.transform.rotation = playerStandPoint.rotation;
+                    Debug.Log("Using standPoint rotation as fallback");
+                }
+            
+                Debug.Log($"Moved player to designated stand point: {playerStandPoint.position}");
             }
             else
             {
-                interactionText.enabled = false;
+                // Fallback to the old method if stand point is missing
+                // Determine offset based on selected direction
+                Vector3 slotPosition = transform.position;
+                Vector3 offset;
+            
+                switch (positionDirection)
+                {
+                    case PositionDirection.Left:
+                        offset = -transform.right * standDistance;
+                        break;
+                    case PositionDirection.Right:
+                        offset = transform.right * standDistance;
+                        break;
+                    case PositionDirection.Forward:
+                        offset = transform.forward * standDistance;
+                        break;
+                    case PositionDirection.Back:
+                        offset = -transform.forward * standDistance;
+                        break;
+                    case PositionDirection.Custom:
+                        // Use a custom vector if needed
+                        offset = new Vector3(1, 0, 1).normalized * standDistance;
+                        break;
+                    default:
+                        offset = transform.forward * standDistance;
+                        break;
+                }
+
+                // Position the player at the selected offset
+                Vector3 newPosition = slotPosition + offset;
+                newPosition.y = savedPlayerPosition.y; // Keep original height
+            
+                // Make player face the slot machine
+                Vector3 lookDirection = slotPosition - newPosition;
+                lookDirection.y = 0; // Keep look direction level (no looking up/down)
+            
+                // Apply position and rotation
+                playerObject.transform.position = newPosition;
+            
+                if (lookDirection != Vector3.zero)
+                {
+                    playerObject.transform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
+                    Debug.Log($"Player looking at slot machine from calculated position: {newPosition} to machine: {slotPosition}");
+                }
             }
-        }
-        else
-        {
-            interactionText.enabled = false;
-        }
+
+            // Enable slot machine UI
+            if (slotMachineUIParent != null)
+            {
+                slotMachineUIParent.SetActive(true);
+                Debug.Log("Slot Machine UI activated: " + slotMachineUIParent.name);
+            }
+            else
+            {
+                Debug.LogError("slotMachineUIParent is null! Make sure it's assigned in the Inspector.");
+            }
     }
 
-    private void StartInteraction()
+    void ExitSlotMachine()
     {
-        isInteracting = true;
-        interactionText.enabled = false;
-        SetUIElementsActive(true);
-        exitText.text = "Press C to exit";
-        playerMovement.EnableMovement(false);
-
-        // Disable the slot machine's box collider
-        slotMachineCollider.enabled = false;
-    }
-
-    private void ExitInteraction()
-    {
-        isInteracting = false;
-        interactionText.enabled = true;
-        SetUIElementsActive(false);
-        exitText.text = "";
-        playerMovement.EnableMovement(true);
-
-        // Enable the slot machine's box collider
-        slotMachineCollider.enabled = true;
+        if (isSpinning) return; // Don't exit while spinning
+        
+        isPlayingSlotMachine = false;
+        canStartNextSpin = true;
+    
+        // Restore player's position and rotation
+        playerObject.transform.position = savedPlayerPosition;
+        playerObject.transform.rotation = savedPlayerRotation;
+    
+        // Re-enable player movement and look
+        if (playerController != null) playerController.enabled = true;
+        if (playerMovementController != null) playerMovementController.enabled = true;
+    
+        // Disable slot machine UI
+        if (slotMachineUIParent != null)
+            slotMachineUIParent.SetActive(false);
+    
+        // Reset auto spins
+        autoSpinsRemaining = 0;
     }
 
     private void SetUIElementsActive(bool isActive)
     {
-        resultText.enabled = isActive;
-        autoSpinText.enabled = isActive;
-        betAmountText.enabled = isActive;
-        exitText.enabled = isActive;
-        amountText.enabled = isActive;
-        autoText.enabled = isActive;
+        if (resultText != null) resultText.enabled = isActive;
+        if (autoSpinText != null) autoSpinText.enabled = isActive;
+        if (betAmountText != null) betAmountText.enabled = isActive;
+        if (exitText != null) exitText.enabled = isActive;
+        if (amountText != null) amountText.enabled = isActive;
+        if (autoText != null) autoText.enabled = isActive;
     }
 
     public void SetBetAmount(int amount)
     {
+        Debug.Log($"SetBetAmount called with amount={amount}, current minBet={minBet}, maxBet={maxBet}");
+    
+        // Clamp the amount between min and max bet values
         betAmount = Mathf.Clamp(amount, minBet, maxBet);
+        Debug.Log($"After clamping: betAmount={betAmount}");
+    
+        // Find the closest predefined bet value
+        int closestIndex = 0;
+        int minDifference = int.MaxValue;
+    
+        for (int i = 0; i < predefinedBets.Length; i++)
+        {
+            int diff = Mathf.Abs(predefinedBets[i] - betAmount);
+            Debug.Log($"Comparing with predefinedBets[{i}]={predefinedBets[i]}, diff={diff}");
+            if (diff < minDifference)
+            {
+                minDifference = diff;
+                closestIndex = i;
+                Debug.Log($"New closest index: {closestIndex} with value {predefinedBets[closestIndex]}");
+            }
+        }
+    
+        currentBetIndex = closestIndex;
+        betAmount = predefinedBets[currentBetIndex]; // Ensure exact match to a predefined value
+        Debug.Log($"Final bet amount set to {betAmount} at index {currentBetIndex}");
+    
         UpdateBetAmountText();
     }
 
     private void UpdateBetAmountText()
     {
-        betAmountText.text = betAmount.ToString();
+        if (betAmountText != null)
+        {
+            betAmountText.text = "Bet: $" + betAmount.ToString();
+            Debug.Log("Updated bet text to: " + betAmountText.text);
+        }
+        else
+        {
+            Debug.LogError("betAmountText is null!");
+        }
     }
 
     private void IncreaseBet()
     {
-        SetBetAmount(betAmount + 1);
-        Debug.Log("Increase bet");
+        // Debug the current state before changing
+        Debug.Log($"Before increase: currentBetIndex={currentBetIndex}, predefinedBets.Length={predefinedBets.Length}");
+    
+        // Increase bet index, but don't exceed array bounds
+        currentBetIndex = Mathf.Min(currentBetIndex + 1, predefinedBets.Length - 1);
+    
+        // Debug the new index
+        Debug.Log($"After increase: currentBetIndex={currentBetIndex}, new bet amount={predefinedBets[currentBetIndex]}");
+    
+        // Apply the new bet amount
+        SetBetAmount(predefinedBets[currentBetIndex]);
+        Debug.Log("Increased bet to " + betAmount);
     }
 
     private void DecreaseBet()
     {
-        SetBetAmount(betAmount - 1);
-        Debug.Log("Decrease bet");
+        currentBetIndex = Mathf.Max(currentBetIndex - 1, 0);
+        SetBetAmount(predefinedBets[currentBetIndex]);
+        Debug.Log("Decreased bet to " + betAmount);
     }
 
     private void CycleAutoSpinOption()
     {
         currentAutoSpinIndex = (currentAutoSpinIndex + 1) % autoSpinOptions.Length;
         UpdateAutoSpinButtonText();
-        Debug.Log("Cycle auto spin option");
+        Debug.Log("Cycle auto spin option to " + autoSpinOptions[currentAutoSpinIndex]);
     }
 
     private void UpdateAutoSpinButtonText()
     {
-        autoSpinText.text = autoSpinOptions[currentAutoSpinIndex].ToString();
+        if (autoSpinText != null)
+        {
+            autoSpinText.text = autoSpinOptions[currentAutoSpinIndex].ToString();
+        }
     }
 
-    private void StartAutoSpins()
+    public void StartAutoSpins()
     {
         autoSpinsRemaining = autoSpinOptions[currentAutoSpinIndex];
+        Debug.Log("Starting auto spins: " + autoSpinsRemaining);
     }
 
-    private void StopAutoSpins()
+    public void StopAutoSpins()
     {
         autoSpinsRemaining = 0;
+        Debug.Log("Stopped auto spins");
     }
 
-    private void StartSpin()
+    public void StartSpin()
     {
         if (isSpinning) return;
+    
+        // Check if player has enough money to place the bet
+        if (balanceManager == null)
+        {
+            Debug.LogError("Cannot start spin: Balance Manager is not available!");
+            if (resultText != null)
+                resultText.text = "Error: Balance system unavailable!";
+            StartCoroutine(HideResultTextAfterDelay(2f));
+            return;
+        }
+    
+        if (!balanceManager.TrySpendMoney(betAmount))
+        {
+            if (resultText != null)
+                resultText.text = "Insufficient funds!";
+            Debug.Log("Player tried to spin but doesn't have enough money. Current bet: " + betAmount);
+            StartCoroutine(HideResultTextAfterDelay(2f));
+            return;
+        }
 
-        Debug.Log("StartSpin called");
+        Debug.Log("StartSpin called with bet: " + betAmount + ". Money deducted from balance.");
+        UpdateBalanceDisplay();
 
         isSpinning = true;
         stopTimes = new float[rollers.Length];
         for (int i = 0; i < rollers.Length; i++)
         {
             stopTimes[i] = Time.time + Random.Range(1f, 3f) + i * 0.5f; // Staggered stop times
-            Debug.Log($"Stop time for roller {i}: {stopTimes[i]}");
         }
         StartCoroutine(SpinSlots());
+    }
+
+    // IPointerClickHandler implementation - for GameObject interaction
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        Debug.Log("OnPointerClick was triggered on: " + eventData.pointerCurrentRaycast.gameObject.name);
+        
+        if (isPlayingSlotMachine && !isSpinning)
+        {
+            GameObject clickedObject = eventData.pointerCurrentRaycast.gameObject;
+
+            if (clickedObject == increaseBetButton)
+            {
+                IncreaseBet();
+                Debug.Log("Clicked increase bet button");
+            }
+            else if (clickedObject == decreaseBetButton)
+            {
+                DecreaseBet();
+                Debug.Log("Clicked decrease bet button");
+            }
+            else if (clickedObject == autoSpinButton)
+            {
+                CycleAutoSpinOption();
+                Debug.Log("Clicked auto spin button");
+            }
+            else if (clickedObject == startAutoSpinButton)
+            {
+                StartAutoSpins();
+                Debug.Log("Clicked start auto spin button");
+            }
+            else if (clickedObject == stopAutoSpinButton)
+            {
+                StopAutoSpins();
+                Debug.Log("Clicked stop auto spin button");
+            }
+            else if (clickedObject == leverObject)
+            {
+                StartSpin();
+                Debug.Log("Clicked lever");
+            }
+        }
     }
 
     // Spinning mechanics
     private IEnumerator SpinSlots()
     {
-        // Main slot machine spinning logic
-        // - Spins each roller independently
-        // - Checks for winning combinations when all rollers stop
-        // - Updates UI with results
-        Debug.Log("SpinSlots coroutine started");
-
+        // Clear any previous results
+        if (resultText != null)
+            resultText.text = "";
+    
+        // Initialize spinning state for all rollers
+        bool[] rollerStopped = new bool[rollers.Length];
+        float[] spinSpeeds = new float[rollers.Length];
+        float[] decelerationRates = new float[rollers.Length];
+        int[] targetSymbolIndices = new int[rollers.Length];
+    
+        // Set up initial speeds and target indices for each roller
+        for (int i = 0; i < rollers.Length; i++)
+        {
+            rollerStopped[i] = false;
+            spinSpeeds[i] = Random.Range(720f, 1080f); // Initial speed (degrees/second)
+            decelerationRates[i] = spinSpeeds[i] / (stopTimes[i] - Time.time); // Calculate deceleration
+            targetSymbolIndices[i] = Random.Range(0, symbols.Length);
+        
+            Debug.Log($"Roller {i} target symbol: {symbols[targetSymbolIndices[i]]}");
+        }
+    
+        // Main spin loop
         while (isSpinning)
         {
-            Debug.Log("Spinning...");
             bool allStopped = true;
+        
             for (int i = 0; i < rollers.Length; i++)
             {
-                if (Time.time < stopTimes[i])
+                if (!rollerStopped[i])
                 {
-                    int symbolIndex = Random.Range(0, symbols.Length);
-                    Debug.Log($"Roller {i} symbol: {symbols[symbolIndex]}");
-                    StartCoroutine(SpinRoller(rollers[i], symbolIndex));
-                    allStopped = false;
+                    // Rotate the roller based on current speed
+                    rollers[i].transform.Rotate(0, spinSpeeds[i] * Time.deltaTime, 0);
+                
+                    // Decrease speed over time
+                    if (Time.time < stopTimes[i])
+                    {
+                        // Still spinning at full or reducing speed
+                        spinSpeeds[i] = Mathf.Max(spinSpeeds[i] - (decelerationRates[i] * Time.deltaTime), 0);
+                        allStopped = false;
+                    }
+                    else
+                    {
+                        // Time to stop - align to exact symbol position
+                        float targetAngle = 360.0f / symbols.Length * targetSymbolIndices[i];
+                    
+                        // Get current rotation in 0-360 range
+                        float currentAngle = rollers[i].transform.eulerAngles.y % 360;
+                    
+                        // Calculate shortest distance to target angle
+                        float angleDifference = Mathf.DeltaAngle(currentAngle, targetAngle);
+                    
+                        if (Mathf.Abs(angleDifference) < 2.0f || spinSpeeds[i] < 1.0f)
+                        {
+                            // Close enough or moving too slowly, snap to exact position
+                            rollers[i].transform.rotation = Quaternion.Euler(0, targetAngle, 0);
+                            rollerStopped[i] = true;
+                        
+                            // Play stop sound or effect here if you have one
+                            Debug.Log($"Roller {i} stopped at symbol: {symbols[targetSymbolIndices[i]]}");
+                        }
+                        else
+                        {
+                            // Still need to align - move slowly toward target
+                            float alignSpeed = Mathf.Min(spinSpeeds[i], Mathf.Abs(angleDifference) * 2);
+                            float direction = Mathf.Sign(angleDifference);
+                        
+                            rollers[i].transform.Rotate(0, alignSpeed * direction * Time.deltaTime, 0);
+                            spinSpeeds[i] = Mathf.Max(spinSpeeds[i] * 0.95f, 20f); // Slow down but keep minimum speed
+                        
+                            allStopped = false;
+                        }
+                    }
                 }
             }
-
+        
             if (allStopped)
             {
                 isSpinning = false;
+                yield return new WaitForSeconds(0.5f); // Short pause before showing result
                 CheckWin();
             }
-
+        
             yield return null;
         }
-        Debug.Log("SpinSlots coroutine ended");
     }
 
     private IEnumerator SpinRoller(GameObject roller, int symbolIndex)
     {
-        Debug.Log($"SpinRoller started for roller with symbol index {symbolIndex}");
-
         // Define the target rotation based on the symbol index
         float targetAngle = 360.0f / symbols.Length * symbolIndex;
 
         // Define the duration of the spin
-        float duration = 1.0f; // 1 second
+        float duration = 0.1f; // Quick rotation
         float elapsedTime = 0.0f;
 
         // Get the initial rotation
@@ -283,90 +682,153 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
 
         // Ensure the roller stops exactly at the target angle
         roller.transform.rotation = finalRotation;
+    }
 
-        Debug.Log($"SpinRoller ended for roller with symbol index {symbolIndex}");
+    private IEnumerator DelayedAutoSpin()
+    {
+        // Wait to show the previous result
+        yield return new WaitForSeconds(2.0f);
+    
+        // Start the next spin
+        StartSpin();
+        autoSpinsRemaining--;
+    
+        // Allow the next auto-spin after this one completes
+        canStartNextSpin = true;
     }
 
     private void CheckWin()
     {
-        // Get final symbols from roller positions
-        // Check if all symbols match for a win
-        // Update UI and trigger win/lose effects
-        if (rollers == null || rollers.Length == 0)
+        // Get the current symbols showing on each roller
+        string[] landedSymbols = new string[rollers.Length];
+        for (int i = 0; i < rollers.Length; i++)
         {
-            Debug.LogError("rollers array is not initialized or empty.");
-            return;
-        }
-
-        // Create an array to store the symbols
-        string[] landedSymbols = new string[3];
-        for (int i = 0; i < 3; i++)
-        {
-            float angle = rollers[i].transform.rotation.eulerAngles.y;
-            int symbolIndex = Mathf.RoundToInt(angle / (360.0f / symbols.Length)) % symbols.Length;
+            // Calculate which symbol is facing forward based on the roller's rotation
+            float angle = rollers[i].transform.eulerAngles.y % 360;
+            int symbolIndex = Mathf.RoundToInt(angle / (360f / symbols.Length)) % symbols.Length;
             landedSymbols[i] = symbols[symbolIndex];
+        
+            Debug.Log($"Roller {i} landed on: {landedSymbols[i]}");
+        }
+    
+        // Calculate winnings based on the landed symbols
+        int winnings = CalculateWinnings(landedSymbols);
+        Debug.Log($"Win amount: ${winnings}");
+    
+        if (winnings > 0)
+        {
+            // Add winnings to player balance
+            if (balanceManager != null)
+            {
+                balanceManager.AddMoney(winnings);
+                Debug.Log($"Added ${winnings} to player balance. New balance: ${balanceManager.GetBalance()}");
+            
+                // Update the balance display after adding winnings
+                UpdateBalanceDisplay();
+            }
+            else
+            {
+                Debug.LogError("Cannot add winnings: Balance Manager is not available!");
+            }
+            
+            if (resultText != null)
+            {
+                resultText.text = $"You win ${winnings}!";
+                Debug.Log($"Set result text to: {resultText.text}");
+            }
+        }
+        else  // winnings is 0 or less
+        {
+            if (resultText != null)
+            {
+                resultText.text = "You lose!";
+                Debug.Log($"Player lost. Set result text to: {resultText.text}");
+            }
+            else
+            {
+                Debug.LogError("resultText is null, cannot display 'You lose!' message");
+            }
         }
 
-        // Check for a win (all symbols in the array are the same)
-        bool isWin = landedSymbols[0] == landedSymbols[1] && landedSymbols[1] == landedSymbols[2];
-
-        if (isWin)
+        // Only auto-hide the result text if there are no more auto-spins pending
+        if (autoSpinsRemaining <= 0)
         {
-            resultText.text = "You win!";
-            Debug.Log("You win!");
+            StartCoroutine(HideResultTextAfterDelay(3f));
+        }
+        // Otherwise the text will remain visible until the next spin starts
+    }
+
+    private void UpdateBalanceDisplay()
+    {
+        if (balanceManager != null && balanceText != null)
+        {
+            int currentBalance = balanceManager.GetBalance();
+            balanceText.text = "$" + currentBalance.ToString();
+            Debug.Log("Updated balance text to: $" + currentBalance);
         }
         else
         {
-            resultText.text = "You lose!";
-            Debug.Log("You lose!");
+            if (balanceManager == null)
+                Debug.LogWarning("Cannot update balance display: balanceManager is null");
+            if (balanceText == null)
+                Debug.LogWarning("Cannot update balance display: balanceText is null");
         }
-
-        // Start coroutine to hide the result text after 2 seconds
-        StartCoroutine(HideResultTextAfterDelay(2f));
+    }
+    
+    private int CalculateWinnings(string[] landedSymbols)
+    {
+        // Check for all matching symbols (best payout)
+        bool allSame = true;
+        for (int i = 1; i < landedSymbols.Length; i++)
+        {
+            if (landedSymbols[i] != landedSymbols[0])
+            {
+                allSame = false;
+                break;
+            }
+        }
+    
+        if (allSame)
+        {
+            // Special multipliers for specific symbols
+            switch (landedSymbols[0])
+            {
+                case "Seven": return betAmount * 15; // Highest payout
+                case "Bar": return betAmount * 10;
+                case "Bell": return betAmount * 8;
+                case "Cherry": return betAmount * 5;
+                default: return betAmount * 5;
+            }
+        }
+    
+        // Check for pairs
+        Dictionary<string, int> symbolCounts = new Dictionary<string, int>();
+        foreach (string symbol in landedSymbols)
+        {
+            if (symbolCounts.ContainsKey(symbol))
+                symbolCounts[symbol]++;
+            else
+                symbolCounts[symbol] = 1;
+        }
+    
+        // Check for three of a kind or pairs
+        foreach (var count in symbolCounts)
+        {
+            if (count.Value == 3) // Three of a kind but not all 3 are the same (already checked above)
+                return betAmount * 3;
+            else if (count.Value == 2) // Pair
+                return betAmount * 2;
+        }
+    
+        // No win - ensure we return 0
+        Debug.Log("No winning combination found, returning 0 winnings");
+        return 0;
     }
 
     private IEnumerator HideResultTextAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        resultText.text = "";
-    }
-
-    // UI Event handling
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        // Handles clicks on various UI elements:
-        // - Bet amount adjustment
-        // - Auto-spin controls
-        // - Lever pull to start spin
-        if (isInteracting)
-        {
-            GameObject clickedObject = eventData.pointerCurrentRaycast.gameObject;
-
-            if (clickedObject == increaseBetButton)
-            {
-                IncreaseBet();
-            }
-            else if (clickedObject == decreaseBetButton)
-            {
-                DecreaseBet();
-            }
-            else if (clickedObject == autoSpinButton)
-            {
-                CycleAutoSpinOption();
-            }
-            else if (clickedObject == startAutoSpinButton)
-            {
-                StartAutoSpins();
-            }
-            else if (clickedObject == stopAutoSpinButton)
-            {
-                StopAutoSpins();
-            }
-            else if (clickedObject == lever)
-            {
-                StartSpin();
-                Debug.Log("lever clicked");
-            }
-        }
+        if (resultText != null)
+            resultText.text = "";
     }
 }
