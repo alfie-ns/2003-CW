@@ -446,6 +446,17 @@ public class Blackjack : MonoBehaviour
             {
                 balanceManager.AddMoney(currentBet * 2);
                 resultText.text = "Win!";
+
+                // After determining the winner and setting resultText
+                int playerValue = GetHandValue(playerHand);
+                int dealerValue = GetHandValue(dealerHand);
+
+                string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
+                                $"The result was: {resultText.text}. " +
+                                $"Give a brief casino dealer comment about this outcome.";
+
+                // Send to AI
+                ApiManager.Instance.SendGameUpdate(prompt);
             }
             else if (playerValue == dealerValue)
             {

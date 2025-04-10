@@ -743,6 +743,15 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             
                 // Update the balance display after adding winnings
                 UpdateBalanceDisplay();
+
+                // Prepare prompt for AI response
+                string symbolsDisplay = string.Join(", ", landedSymbols);
+                string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
+                                $"Player bet ${betAmount} and {(winnings > 0 ? $"won ${winnings}" : "lost")}. " +
+                                $"Give a quick casino host comment about this spin.";
+
+                // Send to AI
+                ApiManager.Instance.SendGameUpdate(prompt);
             }
             else
             {
@@ -761,6 +770,15 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             {
                 resultText.text = "You lose!";
                 Debug.Log($"Player lost. Set result text to: {resultText.text}");
+
+                // Add AI commentary for losses too
+                string symbolsDisplay = string.Join(", ", landedSymbols);
+                string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
+                                $"Player bet ${betAmount} and lost. " +
+                                $"Give a quick casino host comment about this unlucky spin.";
+                
+                // Send to AI
+                ApiManager.Instance.SendGameUpdate(prompt);
             }
             else
             {

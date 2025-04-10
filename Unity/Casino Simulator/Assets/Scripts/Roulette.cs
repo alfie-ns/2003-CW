@@ -104,6 +104,21 @@ public class Roulette : MonoBehaviour
 
         // Display results
         resultText.text += $"\nTotal Winnings: ${totalWinnings}";
+
+        // Create a description of the bets
+        string betsDescription = "";
+        foreach (var bet in currentBets)
+        {
+            betsDescription += $"{bet.Key}: ${bet.Value}, ";
+        }
+
+        string prompt = $"Roulette wheel landed on {result}. " +
+                        $"Player's bets were: {betsDescription} " +
+                        $"Total winnings: ${totalWinnings}. " +
+                        $"Give a brief croupier comment about this roulette spin.";
+
+        // Send to AI
+        ApiManager.Instance.SendGameUpdate(prompt);
         
         // Reset for next round
         ResetGame();

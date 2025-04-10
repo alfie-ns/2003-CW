@@ -11,16 +11,40 @@ public class ApiManager : MonoBehaviour
     [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // the base url of the django API
     [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
     [SerializeField] private Text aiResponseText; // ui element to display the AI response
-    [SerializeField] private Button sendRequestButton; // button to trigger an API request
+    [SerializeField] private Button sendRequestButton; 
+    public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
+
 
     /// <summary>
     /// Sets up the button click listener on start.
     /// </summary>
+    /// <remarks>
+    /// This method is called when the script instance is being loaded.
+    /// </remarks>
     private void Start()
     {
         if (sendRequestButton != null)
         {
             sendRequestButton.onClick.AddListener(() => OnSendRequestClicked("what is the current state of the game?"));
+        }
+    }
+
+    /// <summary>
+    /// Initialise singleton instance on game object awake.
+    /// </summary>
+    /// <remarks>
+    /// This method is called when the script instance is being loaded.
+    /// </remarks>
+    private void Awake()
+    {
+        // Set up singleton for easy access from other scripts
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
         }
     }
 
@@ -31,6 +55,15 @@ public class ApiManager : MonoBehaviour
     private void OnSendRequestClicked(string prompt)
     {
         StartCoroutine(PostRequest("/api/sessions/" + sessionId + "/response/", prompt)); // post the request
+    }
+
+    /// <summary>
+    /// Public method to allow other scripts to send AI prompts
+    /// </summary>
+    /// <param name="prompt">The prompt to send to the AI API.</param>
+    public void SendGameUpdate(string prompt)
+    {
+        OnSendRequestClicked(prompt);
     }
 
     /// <summary>
