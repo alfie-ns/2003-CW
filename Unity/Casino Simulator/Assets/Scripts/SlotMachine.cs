@@ -19,7 +19,7 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
 
     // UI References for GameObjects and text displays
     [Header("UI Elements")]
-    public Text betAmountText; // Shows current bet amount
+    public TMP_Text betAmountText; // Shows current bet amount
     public GameObject increaseBetButton; // GameObject to increase bet
     public GameObject decreaseBetButton; // GameObject to decrease bet
     public GameObject autoSpinButton; // GameObject to cycle through auto-spin options
@@ -27,12 +27,9 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     public GameObject stopAutoSpinButton;
     public GameObject leverObject; // GameObject for the lever
     public GameObject[] rollers; // The spinning reels of the slot machine
-    public Text resultText; // Displays win/lose outcome
-    public Text interactionText; // Shows interaction prompts
-    public Text autoSpinText;
-    public Text exitText;
-    public Text amountText;
-    public Text autoText;
+    public TMP_Text resultText; // Displays win/lose outcome
+    public TMP_Text autoSpinText;
+    public TMP_Text amountText;
     public TMP_Text balanceText; // Shows current balance
     public GameObject slotMachineUIParent; // Parent object containing all UI elements
 
@@ -369,24 +366,25 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     void ExitSlotMachine()
     {
         if (isSpinning) return; // Don't exit while spinning
-        
+    
         isPlayingSlotMachine = false;
         canStartNextSpin = true;
-    
+
         // Restore player's position and rotation
         playerObject.transform.position = savedPlayerPosition;
         playerObject.transform.rotation = savedPlayerRotation;
-    
+
         // Re-enable player movement and look
         if (playerController != null) playerController.enabled = true;
         if (playerMovementController != null) playerMovementController.enabled = true;
-    
+
         // Disable slot machine UI
         if (slotMachineUIParent != null)
             slotMachineUIParent.SetActive(false);
-    
+
         // Reset auto spins
         autoSpinsRemaining = 0;
+        UpdateAutoSpinCounterText();
     }
 
     private void SetUIElementsActive(bool isActive)
@@ -394,9 +392,7 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         if (resultText != null) resultText.enabled = isActive;
         if (autoSpinText != null) autoSpinText.enabled = isActive;
         if (betAmountText != null) betAmountText.enabled = isActive;
-        if (exitText != null) exitText.enabled = isActive;
         if (amountText != null) amountText.enabled = isActive;
-        if (autoText != null) autoText.enabled = isActive;
     }
 
     public void SetBetAmount(int amount)
@@ -434,7 +430,7 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     {
         if (betAmountText != null)
         {
-            betAmountText.text = "Bet: $" + betAmount.ToString();
+            betAmountText.text = "$" + betAmount.ToString();
             Debug.Log("Updated bet text to: " + betAmountText.text);
         }
         else
@@ -469,7 +465,7 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     private void CycleAutoSpinOption()
     {
         currentAutoSpinIndex = (currentAutoSpinIndex + 1) % autoSpinOptions.Length;
-        UpdateAutoSpinButtonText();
+        UpdateAutoSpinCounterText();
         Debug.Log("Cycle auto spin option to " + autoSpinOptions[currentAutoSpinIndex]);
     }
 
@@ -484,12 +480,14 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     public void StartAutoSpins()
     {
         autoSpinsRemaining = autoSpinOptions[currentAutoSpinIndex];
+        UpdateAutoSpinCounterText();
         Debug.Log("Starting auto spins: " + autoSpinsRemaining);
     }
 
     public void StopAutoSpins()
     {
         autoSpinsRemaining = 0;
+        UpdateAutoSpinCounterText();
         Debug.Log("Stopped auto spins");
     }
 
@@ -688,13 +686,33 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     {
         // Wait to show the previous result
         yield return new WaitForSeconds(2.0f);
-    
+
         // Start the next spin
         StartSpin();
         autoSpinsRemaining--;
     
+        // Update the display to show remaining auto spins
+        UpdateAutoSpinCounterText();
+
         // Allow the next auto-spin after this one completes
         canStartNextSpin = true;
+    }
+
+    private void UpdateAutoSpinCounterText()
+    {
+        if (autoSpinText != null)
+        {
+            if (autoSpinsRemaining > 0)
+            {
+                // Show remaining auto spins
+                autoSpinText.text = autoSpinsRemaining.ToString();
+            }
+            else
+            {
+                // Reset to show the option value when not auto-spinning
+                autoSpinText.text = autoSpinOptions[currentAutoSpinIndex].ToString();
+            }
+        }
     }
 
     private void CheckWin()
