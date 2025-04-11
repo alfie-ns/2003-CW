@@ -3,11 +3,8 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-
-// This class implements a Blackjack game in Unity, handling all game logic and UI interactions
 public class Blackjack : MonoBehaviour
 {
-    // UI references for disPlayingBlackjack game state (hands, balance, bet amount, results)
     [Header("UI Elements")]
     public TMP_Text playerHandText;
     public TMP_Text dealerHandText;
@@ -16,7 +13,7 @@ public class Blackjack : MonoBehaviour
     public TMP_Text resultText;
     
     [Header("Buttons")]
-    public Button[] chipButtons; // 1,5,10,25,100 value buttons
+    public Button[] chipButtons;
     public Button dealButton;
     public Button hitButton;
     public Button standButton;
@@ -30,7 +27,7 @@ public class Blackjack : MonoBehaviour
     public Transform playerStandPoint;
     
     [Header("Balance Management")]
-    public MonoBehaviour balanceManagerObject; // Reference to the object with IBalanceManager implementation
+    public MonoBehaviour balanceManagerObject;
     private IBalanceManager balanceManager;
 
     private bool isPlayingBlackjack = false;
@@ -44,6 +41,8 @@ public class Blackjack : MonoBehaviour
     private List<Card> dealerHand;
     private int currentBet;
     private bool isPlayerTurn;
+    private int playerValue;
+    private int dealerValue;
 
     // Card class to represent individual cards
     private class Card
@@ -63,10 +62,6 @@ public class Blackjack : MonoBehaviour
     {
         // Get the balance manager
         balanceManager = balanceManagerObject as IBalanceManager;
-        if (balanceManager == null)
-        {
-            Debug.LogError("Balance Manager not found or doesn't implement IBalanceManager!");
-        }
         
         // Setup initial game state and UI
         InitializeChipButtons();
@@ -101,23 +96,12 @@ public class Blackjack : MonoBehaviour
                         // Check if the object hit is this blackjack table
                         if (hit.transform == transform || hit.transform.IsChildOf(transform))
                         {
-                            Debug.Log("Player is looking at the blackjack table");
                             StartBlackjack();
                         }
-                        else
-                        {
-                            Debug.Log("Player is looking at " + hit.transform.name + " but not the blackjack table");
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("Player is not looking at anything within interaction range");
                     }
                 }
                 else
                 {
-                    Debug.LogError("No camera found on player object. Add fallback behavior here.");
-                
                     // Fallback if no camera is found - just check if player is facing the table
                     Vector3 directionToTable = transform.position - playerObject.transform.position;
                     directionToTable.y = 0; // Ignore height difference
@@ -129,12 +113,7 @@ public class Blackjack : MonoBehaviour
                     // Check if player is roughly facing the table (dot product > 0.5 means < 60 degree angle)
                     if (Vector3.Dot(playerForward.normalized, directionToTable.normalized) > 0.5f)
                     {
-                        Debug.Log("Player is facing the blackjack table (fallback check)");
                         StartBlackjack();
-                    }
-                    else
-                    {
-                        Debug.Log("Player is not facing the blackjack table");
                     }
                 }
             }
@@ -148,15 +127,12 @@ public class Blackjack : MonoBehaviour
     void StartBlackjack()
     {
         isPlayingBlackjack = true;
-    
-        Debug.Log("Starting Blackjack game");
 
         // Find and disable the SlotMachine UI first
         GameObject slotMachineUI = GameObject.Find("slotMachineUIParent");
         if (slotMachineUI != null)
         {
             slotMachineUI.SetActive(false);
-            Debug.Log("SlotMachine UI disabled");
         }
 
         Crosshair.SetActive(false); // Hide crosshair when playing Blackjack
@@ -166,7 +142,6 @@ public class Blackjack : MonoBehaviour
         firstPersonController = playerObject.GetComponent<FirstPersonController>();
         firstPersonLook = playerObject.GetComponentInChildren<FirstPersonLook>();
 
-        // Disable components before moving player
         if (playerController != null) playerController.enabled = false;
         if (firstPersonController != null) firstPersonController.enabled = false;
         if (firstPersonLook != null) 
@@ -179,36 +154,26 @@ public class Blackjack : MonoBehaviour
         savedPlayerPosition = playerObject.transform.position;
         savedPlayerRotation = playerObject.transform.rotation;
 
-        // FIXED: Use the designated player stand point
         if (playerStandPoint != null)
         {
-            // Move player to the designated position
             playerObject.transform.position = playerStandPoint.position;
         
             // Calculate the direction from the player to the table
             Vector3 lookDirection = transform.position - playerStandPoint.position;
-            lookDirection.y = 0; // Keep the look direction level (no looking up/down)
+            lookDirection.y = 0;
         
-            // Make the player face the table
             if (lookDirection != Vector3.zero)
             {
                 playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
-                Debug.Log($"Player looking at table from position: {playerStandPoint.position} to table: {transform.position}");
             }
             else
             {
                 // Fall back to using the stand point's rotation if calculation fails
                 playerObject.transform.rotation = playerStandPoint.rotation;
-                Debug.Log("Using standPoint rotation as fallback");
             }
-        
-            Debug.Log($"Moved player to designated stand point: {playerStandPoint.position}");
         }
         else
         {
-            Debug.LogError("Player Stand Point is not assigned! Please assign it in the Inspector.");
-        
-            // Fallback to the old method if stand point is missing
             Vector3 tablePosition = transform.position;
             Vector3 directionToTable = tablePosition - playerObject.transform.position;
             directionToTable.y = 0;
@@ -225,11 +190,9 @@ public class Blackjack : MonoBehaviour
             if (lookDirection != Vector3.zero)
             {
                 playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
-                Debug.Log($"Player looking at table from calculated position: {newPosition} to table: {tablePosition}");
             }
         }
     
-        // Show cursor and enable UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
@@ -237,11 +200,6 @@ public class Blackjack : MonoBehaviour
         if (blackjackUIParent != null)
         {
             blackjackUIParent.SetActive(true);
-            Debug.Log("Blackjack UI activated: " + blackjackUIParent.name);
-        }
-        else
-        {
-            Debug.LogError("blackjackUIParent is null! Make sure it's assigned in the Inspector.");
         }
 
         ResetGame();
@@ -369,7 +327,6 @@ public class Blackjack : MonoBehaviour
         return card;
     }
 
-    // Handles player actions (Hit and Stand)
     void Hit()
     {
         if (!isPlayerTurn) return;
@@ -405,7 +362,6 @@ public class Blackjack : MonoBehaviour
         UpdateUI();
     }
 
-    // Calculates the total value of a hand, handling Aces as 1 or 11
     int GetHandValue(List<Card> hand)
     {
         // Special handling for Aces: initially count as 11, can reduce to 1 if would bust
@@ -434,23 +390,19 @@ public class Blackjack : MonoBehaviour
         return value;
     }
 
-    // Determines the winner between dealer and player hands
     void DetermineWinner()
     {
-        int dealerValue = GetHandValue(dealerHand);
-        int playerValue = GetHandValue(playerHand);
+        dealerValue = GetHandValue(dealerHand);
+        playerValue = GetHandValue(playerHand);
 
         if (playerValue <= 21)
         {
             if (dealerValue > 21 || playerValue > dealerValue)
             {
                 balanceManager.AddMoney(currentBet * 2);
-                resultText.text = "Win!";
+                resultText.text = "You Win!";
 
                 // After determining the winner and setting resultText
-                int playerValue = GetHandValue(playerHand);
-                int dealerValue = GetHandValue(dealerHand);
-
                 string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
                                 $"The result was: {resultText.text}. " +
                                 $"Give a brief casino dealer comment about this outcome.";
@@ -465,14 +417,13 @@ public class Blackjack : MonoBehaviour
             }
             else
             {
-                resultText.text = "Lose";
+                resultText.text = "You Lose";
             }
         }
 
         currentBet = 0;
     }
 
-    // Special handling for when player gets Blackjack (21 on initial deal)
     void ProcessBlackjack()
     {
         // Pays out at 3:2 odds (2.5x bet)
@@ -498,10 +449,8 @@ public class Blackjack : MonoBehaviour
         standButton.interactable = interactable;
     }
 
-    // Updates all UI elements with current game state
     void UpdateUI()
     {
-        // Only update the balance text if the manager is available
         if (balanceManager != null)
         {
             balanceText.text = $"${balanceManager.GetBalance()}";

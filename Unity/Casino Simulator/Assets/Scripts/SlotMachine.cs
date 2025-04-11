@@ -79,10 +79,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             {
                 Debug.LogError("Balance Manager object found but doesn't implement IBalanceManager interface!");
             }
-            else
-            {
-                Debug.Log("Balance Manager successfully initialized");
-            }
         }
         else
         {
@@ -119,22 +115,12 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                         // Check if the object hit is this slot machine
                         if (hit.transform == transform || hit.transform.IsChildOf(transform))
                         {
-                            Debug.Log("Player is looking at the slot machine");
                             StartSlotMachine();
                         }
-                        else
-                        {
-                            Debug.Log("Player is looking at " + hit.transform.name + " but not the slot machine");
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("Player is not looking at anything within interaction range");
                     }
                 }
                 else
                 {
-                    Debug.LogError("No camera found on player object. Add fallback behavior here.");
                     
                     // Fallback if no camera is found - just check if player is facing the table
                     Vector3 directionToSlotMachine = transform.position - playerObject.transform.position;
@@ -147,7 +133,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                     // Check if player is roughly facing the slot machine (dot product > 0.5 means < 60 degree angle)
                     if (Vector3.Dot(playerForward.normalized, directionToSlotMachine.normalized) > 0.5f)
                     {
-                        Debug.Log("Player is facing the slot machine (fallback check)");
                         StartSlotMachine();
                     }
                     else
@@ -176,7 +161,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 // Handled by the OnPointerClick method via EventSystem
-                Debug.Log("Clicked on UI element - will be handled by EventSystem");
                 return;
             }
         
@@ -191,8 +175,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             RaycastHit[] hits = Physics.RaycastAll(ray, 100f); // Get all hits, not just the first one
         
-            Debug.Log($"Raycast hit {hits.Length} objects");
-        
             // Sort hits by distance to get closest first
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
         
@@ -200,13 +182,11 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             foreach (RaycastHit hit in hits)
             {
                 GameObject hitObject = hit.collider.gameObject;
-                Debug.Log($"Hit: {hitObject.name} at distance {hit.distance}");
             
                 // Check if this is one of our interactive elements
                 if (hitObject == leverObject)
                 {
                     StartSpin();
-                    Debug.Log("Clicked lever");
                     break; // Exit the loop once we've handled a click
                 }
                 else if (hitObject == increaseBetButton)
@@ -252,7 +232,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         currentBetIndex = 0; // Set to first bet option (1)
         betAmount = predefinedBets[currentBetIndex];
         UpdateBetAmountText();
-        Debug.Log("Bet amount set to: " + betAmount + " (should be " + predefinedBets[0] + ")");
     
         // Update the balance display - KEEP THIS SEPARATE FROM BET AMOUNT
         UpdateBalanceDisplay();
@@ -262,7 +241,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (blackjackUI != null)
             {
                 blackjackUI.SetActive(false);
-                Debug.Log("Blackjack UI disabled");
             }
 
             // Get and disable player components first
@@ -292,16 +270,12 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                 if (lookDirection != Vector3.zero)
                 {
                     playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
-                    Debug.Log($"Player looking at slot machine from position: {playerStandPoint.position} to machine: {transform.position}");
                 }
                 else
                 {
                     // Fall back to using the stand point's rotation if calculation fails
                     playerObject.transform.rotation = playerStandPoint.rotation;
-                    Debug.Log("Using standPoint rotation as fallback");
                 }
-            
-                Debug.Log($"Moved player to designated stand point: {playerStandPoint.position}");
             }
             else
             {
@@ -347,7 +321,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                 if (lookDirection != Vector3.zero)
                 {
                     playerObject.transform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
-                    Debug.Log($"Player looking at slot machine from calculated position: {newPosition} to machine: {slotPosition}");
                 }
             }
 
@@ -355,7 +328,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (slotMachineUIParent != null)
             {
                 slotMachineUIParent.SetActive(true);
-                Debug.Log("Slot Machine UI activated: " + slotMachineUIParent.name);
             }
             else
             {
@@ -397,11 +369,9 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
 
     public void SetBetAmount(int amount)
     {
-        Debug.Log($"SetBetAmount called with amount={amount}, current minBet={minBet}, maxBet={maxBet}");
     
         // Clamp the amount between min and max bet values
         betAmount = Mathf.Clamp(amount, minBet, maxBet);
-        Debug.Log($"After clamping: betAmount={betAmount}");
     
         // Find the closest predefined bet value
         int closestIndex = 0;
@@ -410,18 +380,15 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         for (int i = 0; i < predefinedBets.Length; i++)
         {
             int diff = Mathf.Abs(predefinedBets[i] - betAmount);
-            Debug.Log($"Comparing with predefinedBets[{i}]={predefinedBets[i]}, diff={diff}");
             if (diff < minDifference)
             {
                 minDifference = diff;
                 closestIndex = i;
-                Debug.Log($"New closest index: {closestIndex} with value {predefinedBets[closestIndex]}");
             }
         }
     
         currentBetIndex = closestIndex;
         betAmount = predefinedBets[currentBetIndex]; // Ensure exact match to a predefined value
-        Debug.Log($"Final bet amount set to {betAmount} at index {currentBetIndex}");
     
         UpdateBetAmountText();
     }
@@ -431,42 +398,28 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         if (betAmountText != null)
         {
             betAmountText.text = "$" + betAmount.ToString();
-            Debug.Log("Updated bet text to: " + betAmountText.text);
-        }
-        else
-        {
-            Debug.LogError("betAmountText is null!");
         }
     }
 
     private void IncreaseBet()
     {
-        // Debug the current state before changing
-        Debug.Log($"Before increase: currentBetIndex={currentBetIndex}, predefinedBets.Length={predefinedBets.Length}");
-    
         // Increase bet index, but don't exceed array bounds
         currentBetIndex = Mathf.Min(currentBetIndex + 1, predefinedBets.Length - 1);
     
-        // Debug the new index
-        Debug.Log($"After increase: currentBetIndex={currentBetIndex}, new bet amount={predefinedBets[currentBetIndex]}");
-    
         // Apply the new bet amount
         SetBetAmount(predefinedBets[currentBetIndex]);
-        Debug.Log("Increased bet to " + betAmount);
     }
 
     private void DecreaseBet()
     {
         currentBetIndex = Mathf.Max(currentBetIndex - 1, 0);
         SetBetAmount(predefinedBets[currentBetIndex]);
-        Debug.Log("Decreased bet to " + betAmount);
     }
 
     private void CycleAutoSpinOption()
     {
         currentAutoSpinIndex = (currentAutoSpinIndex + 1) % autoSpinOptions.Length;
         UpdateAutoSpinCounterText();
-        Debug.Log("Cycle auto spin option to " + autoSpinOptions[currentAutoSpinIndex]);
     }
 
     private void UpdateAutoSpinButtonText()
@@ -481,14 +434,12 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     {
         autoSpinsRemaining = autoSpinOptions[currentAutoSpinIndex];
         UpdateAutoSpinCounterText();
-        Debug.Log("Starting auto spins: " + autoSpinsRemaining);
     }
 
     public void StopAutoSpins()
     {
         autoSpinsRemaining = 0;
         UpdateAutoSpinCounterText();
-        Debug.Log("Stopped auto spins");
     }
 
     public void StartSpin()
@@ -498,7 +449,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         // Check if player has enough money to place the bet
         if (balanceManager == null)
         {
-            Debug.LogError("Cannot start spin: Balance Manager is not available!");
             if (resultText != null)
                 resultText.text = "Error: Balance system unavailable!";
             StartCoroutine(HideResultTextAfterDelay(2f));
@@ -509,12 +459,10 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         {
             if (resultText != null)
                 resultText.text = "Insufficient funds!";
-            Debug.Log("Player tried to spin but doesn't have enough money. Current bet: " + betAmount);
             StartCoroutine(HideResultTextAfterDelay(2f));
             return;
         }
 
-        Debug.Log("StartSpin called with bet: " + betAmount + ". Money deducted from balance.");
         UpdateBalanceDisplay();
 
         isSpinning = true;
@@ -529,7 +477,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     // IPointerClickHandler implementation - for GameObject interaction
     public void OnPointerClick(PointerEventData eventData)
     {
-        Debug.Log("OnPointerClick was triggered on: " + eventData.pointerCurrentRaycast.gameObject.name);
         
         if (isPlayingSlotMachine && !isSpinning)
         {
@@ -538,32 +485,26 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (clickedObject == increaseBetButton)
             {
                 IncreaseBet();
-                Debug.Log("Clicked increase bet button");
             }
             else if (clickedObject == decreaseBetButton)
             {
                 DecreaseBet();
-                Debug.Log("Clicked decrease bet button");
             }
             else if (clickedObject == autoSpinButton)
             {
                 CycleAutoSpinOption();
-                Debug.Log("Clicked auto spin button");
             }
             else if (clickedObject == startAutoSpinButton)
             {
                 StartAutoSpins();
-                Debug.Log("Clicked start auto spin button");
             }
             else if (clickedObject == stopAutoSpinButton)
             {
                 StopAutoSpins();
-                Debug.Log("Clicked stop auto spin button");
             }
             else if (clickedObject == leverObject)
             {
                 StartSpin();
-                Debug.Log("Clicked lever");
             }
         }
     }
@@ -588,8 +529,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             spinSpeeds[i] = Random.Range(720f, 1080f); // Initial speed (degrees/second)
             decelerationRates[i] = spinSpeeds[i] / (stopTimes[i] - Time.time); // Calculate deceleration
             targetSymbolIndices[i] = Random.Range(0, symbols.Length);
-        
-            Debug.Log($"Roller {i} target symbol: {symbols[targetSymbolIndices[i]]}");
         }
     
         // Main spin loop
@@ -627,9 +566,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                             // Close enough or moving too slowly, snap to exact position
                             rollers[i].transform.rotation = Quaternion.Euler(0, targetAngle, 0);
                             rollerStopped[i] = true;
-                        
-                            // Play stop sound or effect here if you have one
-                            Debug.Log($"Roller {i} stopped at symbol: {symbols[targetSymbolIndices[i]]}");
                         }
                         else
                         {
@@ -725,13 +661,10 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             float angle = rollers[i].transform.eulerAngles.y % 360;
             int symbolIndex = Mathf.RoundToInt(angle / (360f / symbols.Length)) % symbols.Length;
             landedSymbols[i] = symbols[symbolIndex];
-        
-            Debug.Log($"Roller {i} landed on: {landedSymbols[i]}");
         }
     
         // Calculate winnings based on the landed symbols
         int winnings = CalculateWinnings(landedSymbols);
-        Debug.Log($"Win amount: ${winnings}");
     
         if (winnings > 0)
         {
@@ -739,7 +672,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (balanceManager != null)
             {
                 balanceManager.AddMoney(winnings);
-                Debug.Log($"Added ${winnings} to player balance. New balance: ${balanceManager.GetBalance()}");
             
                 // Update the balance display after adding winnings
                 UpdateBalanceDisplay();
@@ -761,7 +693,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (resultText != null)
             {
                 resultText.text = $"You win ${winnings}!";
-                Debug.Log($"Set result text to: {resultText.text}");
             }
         }
         else  // winnings is 0 or less
@@ -769,7 +700,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             if (resultText != null)
             {
                 resultText.text = "You lose!";
-                Debug.Log($"Player lost. Set result text to: {resultText.text}");
 
                 // Add AI commentary for losses too
                 string symbolsDisplay = string.Join(", ", landedSymbols);
@@ -800,7 +730,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         {
             int currentBalance = balanceManager.GetBalance();
             balanceText.text = "$" + currentBalance.ToString();
-            Debug.Log("Updated balance text to: $" + currentBalance);
         }
         else
         {
@@ -857,7 +786,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         }
     
         // No win - ensure we return 0
-        Debug.Log("No winning combination found, returning 0 winnings");
         return 0;
     }
 
