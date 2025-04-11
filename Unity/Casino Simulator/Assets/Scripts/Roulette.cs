@@ -1,34 +1,87 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using TMPro;
 
 // Main class that handles the roulette game mechanics and UI
 public class Roulette : MonoBehaviour
 {
     [Header("UI Elements")]
-    public Text resultText; // Displays the result of the spin and winnings
-    public Text countdownText; // Shows countdown until next spin
-    public Text currentBetText; // Displays all current bets
+    public TextMeshProUGUI resultText; // Displays the result of the spin and winnings
+    public TextMeshProUGUI currentBetText; // Displays all current bets
+    public TextMeshProUGUI balanceText; // Displays the player's current balance
     
-    [Header("Betting")]
+    [Header("Betting Controls")]
     public Button[] chipButtons; // Array of buttons representing different chip denominations (1,2,5,10,25,50,100)
-    public Transform rouletteBoardTransform; // Reference to the game board where betting spots are placed
-    public float spinTime = 60f; // Duration of betting round in seconds
-
+    public Button dealButton; // Button to start the roulette spin
+    public Button clearBetButton; // Button to clear all bets
+    public Button[] betOptionButtons; // Array of buttons for betting options (Red, Black, Odd, Even, etc.)
+    
+    [Header("Game Settings")]
+    public float spinAnimationTime = 3f; // Duration of the spin animation in seconds
+    
     private int selectedChipValue; // Tracks the currently selected chip value for betting
-    private float timeUntilSpin; // Countdown timer
     private Dictionary<string, int> currentBets = new Dictionary<string, int>(); // Stores all active bets as betType:amount pairs (e.g. "Red":100)
     private bool bettingOpen = true; // Controls if players can place bets
+    private bool isSpinning = false; // Tracks if wheel is currently spinning
+    private int lastResult = -1; // Stores the last spin result (-1 means no result yet)
 
+    [Header("Game Interaction")]
+    public float interactionRange = 2f;
+    public GameObject rouletteUIParent;
+    public GameObject playerObject;
+    public GameObject Crosshair;
+    public Transform playerStandPoint;
+    
+    [Header("Balance Management")]
+    public MonoBehaviour balanceManagerObject; // Reference to the object with IBalanceManager implementation
+    private IBalanceManager balanceManager;
+
+    private bool isPlayingRoulette = false;
+    private Vector3 savedPlayerPosition;
+    private Quaternion savedPlayerRotation;
+    private CharacterController playerController;
+    private FirstPersonController firstPersonController;
+    private FirstPersonLook firstPersonLook;
+
+    void Awake()
+    {
+        // Disable Roulette UI at start
+        if (rouletteUIParent != null)
+            rouletteUIParent.SetActive(false);
+    }
+    
     void Start()
     {
-        timeUntilSpin = spinTime;
         SetupChipButtons();
+        SetupGameControls();
+        SetupBetButtons();
+        UpdateBetDisplay();
+        resultText.text = "Place your bets!";
+        
+        // Get the balance manager
+        balanceManager = balanceManagerObject as IBalanceManager;
+        if (balanceManager == null)
+        {
+            Debug.LogError("Balance Manager not found or doesn't implement IBalanceManager!");
+        }
+        else
+        {
+            UpdateBalanceDisplay();
+        }
+    }
+
+    private void UpdateBalanceDisplay()
+    {
+        if (balanceManager == null || balanceText == null) return;
+        
+        int currentBalance = balanceManager.GetBalance();
+        balanceText.text = $"${currentBalance}";
     }
 
     void SetupChipButtons()
     {
-        int[] chipValues = { 1, 2, 5, 10, 25, 50, 100 };
+        int[] chipValues = { 1, 5, 10, 25, 100 };
         
         for (int i = 0; i < chipButtons.Length; i++)
         {
@@ -37,47 +90,307 @@ public class Roulette : MonoBehaviour
         }
     }
 
-    void Update()
+    void SetupGameControls()
     {
-        if (bettingOpen)
+        dealButton.onClick.AddListener(StartDeal);
+        clearBetButton.onClick.AddListener(ClearBets);
+    }
+
+    void SetupBetButtons()
+    {
+        // Setup each bet option button to call PlaceBet with its corresponding bet type
+        foreach (Button button in betOptionButtons)
         {
-            UpdateTimer();
+            string betType = button.GetComponentInChildren<TextMeshProUGUI>().text;
+            button.onClick.AddListener(() => PlaceBet(betType));
         }
     }
 
-    void UpdateTimer()
+    void Update()
     {
-        timeUntilSpin -= Time.deltaTime;
-        countdownText.text = $"Time until spin: {Mathf.CeilToInt(timeUntilSpin)}s";
-
-        if (timeUntilSpin <= 0)
+        // Original update code for button states
+        clearBetButton.interactable = bettingOpen && currentBets.Count > 0;
+        dealButton.interactable = bettingOpen && currentBets.Count > 0;
+        
+        foreach (Button button in betOptionButtons)
         {
-            bettingOpen = false;
-            Spin();
+            button.interactable = bettingOpen && selectedChipValue > 0;
         }
+        
+        // New interaction code
+        if (!isPlayingRoulette && Input.GetKeyDown(KeyCode.E))
+        {
+            // First check if player is in range
+            float distance = Vector3.Distance(playerObject.transform.position, transform.position);
+            
+            if (distance <= interactionRange)
+            {
+                // Then check if player is looking at the roulette table
+                Camera playerCamera = playerObject.GetComponentInChildren<Camera>();
+                if (playerCamera != null)
+                {
+                    RaycastHit hit;
+                    if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, interactionRange))
+                    {
+                        // Check if the object hit is this roulette table
+                        if (hit.transform == transform || hit.transform.IsChildOf(transform))
+                        {
+                            StartRoulette();
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError("No camera found on player object. Add fallback behavior here.");
+                    
+                    // Fallback if no camera is found - just check if player is facing the table
+                    Vector3 directionToTable = transform.position - playerObject.transform.position;
+                    directionToTable.y = 0; // Ignore height difference
+                    
+                    // Get forward direction of player
+                    Vector3 playerForward = playerObject.transform.forward;
+                    playerForward.y = 0; // Ignore height difference
+                    
+                    // Check if player is roughly facing the table (dot product > 0.5 means < 60 degree angle)
+                    if (Vector3.Dot(playerForward.normalized, directionToTable.normalized) > 0.5f)
+                    {
+                        StartRoulette();
+                    }
+                }
+            }
+        }
+        else if (isPlayingRoulette && Input.GetKeyDown(KeyCode.Escape))
+        {
+            ExitRoulette();
+        }
+    }
+
+    void StartRoulette()
+    {
+        isPlayingRoulette = true;
+
+        // Find and disable other game UIs
+        GameObject blackjackUI = GameObject.Find("blackjackUIParent");
+        if (blackjackUI != null)
+        {
+            blackjackUI.SetActive(false);
+        }
+        
+        Crosshair.SetActive(false); // Hide crosshair when playing Roulette
+
+        // Get and disable player components first
+        playerController = playerObject.GetComponent<CharacterController>();
+        firstPersonController = playerObject.GetComponent<FirstPersonController>();
+        firstPersonLook = playerObject.GetComponentInChildren<FirstPersonLook>();
+
+        // Disable components before moving player
+        if (playerController != null) playerController.enabled = false;
+        if (firstPersonController != null) firstPersonController.enabled = false;
+        if (firstPersonLook != null) 
+        {
+            firstPersonLook.enabled = false;
+            firstPersonLook.transform.localRotation = Quaternion.identity;
+        }
+
+        // Save player's position and rotation after disabling controls
+        savedPlayerPosition = playerObject.transform.position;
+        savedPlayerRotation = playerObject.transform.rotation;
+
+        // Use the designated player stand point
+        if (playerStandPoint != null)
+        {
+            // Move player to the designated position
+            playerObject.transform.position = playerStandPoint.position;
+        
+            // Calculate the direction from the player to the table
+            Vector3 lookDirection = transform.position - playerStandPoint.position;
+            lookDirection.y = 0; // Keep the look direction level (no looking up/down)
+        
+            // Make the player face the table
+            if (lookDirection != Vector3.zero)
+            {
+                playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            }
+            else
+            {
+                // Fall back to using the stand point's rotation if calculation fails
+                playerObject.transform.rotation = playerStandPoint.rotation;
+            }
+        }
+        else
+        {
+            Debug.LogError("Player Stand Point is not assigned! Please assign it in the Inspector.");
+        
+            // Fallback to a calculated position if stand point is missing
+            Vector3 tablePosition = transform.position;
+            Vector3 directionToTable = tablePosition - playerObject.transform.position;
+            directionToTable.y = 0;
+            directionToTable = directionToTable.normalized;
+        
+            Vector3 newPosition = tablePosition - directionToTable * 2.5f;
+            newPosition.y = savedPlayerPosition.y;
+        
+            playerObject.transform.position = newPosition;
+        
+            Vector3 lookDirection = tablePosition - newPosition;
+            lookDirection.y = 0;
+        
+            if (lookDirection != Vector3.zero)
+            {
+                playerObject.transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            }
+        }
+    
+        // Show cursor and enable UI
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // Enable Roulette UI
+        if (rouletteUIParent != null)
+        {
+            rouletteUIParent.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("rouletteUIParent is null! Make sure it's assigned in the Inspector.");
+        }
+
+        // Reset the game for a fresh start
+        ResetGame();
+
+        // Update balance when starting the game
+        UpdateBalanceDisplay();
+    }
+
+    void ExitRoulette()
+    {
+        if (isSpinning) return; // Don't allow exit while spinning
+        
+        isPlayingRoulette = false;
+    
+        // Restore player's position and rotation
+        playerObject.transform.position = savedPlayerPosition;
+        playerObject.transform.rotation = savedPlayerRotation;
+    
+        // Re-enable player movement and look
+        if (playerController != null) playerController.enabled = true;
+        if (firstPersonController != null) firstPersonController.enabled = true;
+        if (firstPersonLook != null) firstPersonLook.enabled = true;
+    
+        // Lock cursor again
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        Crosshair.SetActive(true); // Show crosshair when exiting Roulette
+    
+        // Disable Roulette UI
+        if (rouletteUIParent != null)
+            rouletteUIParent.SetActive(false);
+    
+        // Clear any active bets when exiting
+        ClearBets();
+
+        // Update balance one last time before exiting
+        UpdateBalanceDisplay();
     }
 
     public void SelectChipValue(int value)
     {
         if (!bettingOpen) return;
-        selectedChipValue = value;
+    
+        // If the same chip value is clicked again, just add to it instead of resetting
+        if (selectedChipValue == value)
+        {
+            // Do nothing, we'll just keep the same value
+            // The highlighting will show the user which chip is selected
+        }
+        else
+        {
+            // New chip selected, update the selected value
+            selectedChipValue = value;
+        }
+    
+        // Highlight the selected chip button (optional UI feedback)
+        for (int i = 0; i < chipButtons.Length; i++)
+        {
+            chipButtons[i].GetComponent<Image>().color = 
+                (chipButtons[i].GetComponentInChildren<TextMeshProUGUI>().text == value.ToString()) 
+                ? Color.yellow : Color.white;
+        }
     }
 
-    public void PlaceBet(string betSpot)
+    public void PlaceBet(string betType)
     {
         if (!bettingOpen || selectedChipValue <= 0) return;
 
+        // Check if player has enough money to place this bet
+        if (balanceManager != null)
+        {
+            bool success = balanceManager.TrySpendMoney(selectedChipValue);
+            if (!success)
+            {
+                // Display insufficient funds message
+                string currentText = resultText.text;
+                resultText.text = "Insufficient funds for this bet!";
+                
+                // Restore previous message after a delay
+                StartCoroutine(RestoreTextAfterDelay(currentText, 2.0f));
+                return;
+            }
+            
+            // Update balance display immediately after successful bet
+            UpdateBalanceDisplay();
+        }
+
         // Add bet to current bets
-        if (currentBets.ContainsKey(betSpot))
-            currentBets[betSpot] += selectedChipValue;
+        if (currentBets.ContainsKey(betType))
+            currentBets[betType] += selectedChipValue;
         else
-            currentBets[betSpot] = selectedChipValue;
+            currentBets[betType] = selectedChipValue;
+
+        // Provide visual feedback that the bet was placed
+        foreach (Button button in betOptionButtons)
+        {
+            if (button.GetComponentInChildren<TextMeshProUGUI>().text == betType)
+            {
+                StartCoroutine(FlashButton(button));
+                break;
+            }
+        }
 
         UpdateBetDisplay();
     }
 
+    private System.Collections.IEnumerator RestoreTextAfterDelay(string textToRestore, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        resultText.text = textToRestore;
+    }
+
+    private System.Collections.IEnumerator FlashButton(Button button)
+    {
+        ColorBlock colors = button.colors;
+        Color originalColor = colors.normalColor;
+    
+        // Flash to a highlight color
+        colors.normalColor = new Color(0.8f, 0.8f, 0.2f); // Gold-ish color
+        button.colors = colors;
+    
+        yield return new WaitForSeconds(0.1f);
+    
+        // Return to original color
+        colors.normalColor = originalColor;
+        button.colors = colors;
+    }
+
     void UpdateBetDisplay()
     {
+        if (currentBets.Count == 0)
+        {
+            currentBetText.text = "No bets placed";
+            return;
+        }
+
         string betDisplay = "Current Bets:\n";
         foreach (var bet in currentBets)
         {
@@ -86,87 +399,246 @@ public class Roulette : MonoBehaviour
         currentBetText.text = betDisplay;
     }
 
+    public void StartDeal()
+    {
+        if (!bettingOpen || currentBets.Count == 0 || isSpinning) return;
+        
+        // Close betting and disable controls
+        bettingOpen = false;
+        isSpinning = true;
+        resultText.text = "Spinning...";
+        
+        // Start spin animation
+        Invoke("Spin", spinAnimationTime);
+    }
+
+    public void ClearBets()
+    {
+        if (!bettingOpen || isSpinning) return;
+    
+        // Refund all current bets to the player
+        if (balanceManager != null)
+        {
+            int totalRefund = 0;
+            foreach (var bet in currentBets)
+            {
+                totalRefund += bet.Value;
+            }
+        
+            if (totalRefund > 0)
+            {
+                balanceManager.AddMoney(totalRefund);
+                resultText.text = $"Bets cleared. ${totalRefund} returned to your balance.";
+                
+                // Update balance display immediately after refund
+                UpdateBalanceDisplay();
+            }
+        }
+    
+        currentBets.Clear();
+        UpdateBetDisplay();
+    }
+
     private void Spin()
     {
         // Simulate spinning the roulette wheel
         int result = Random.Range(0, 37);
-        resultText.text = "Result: " + result.ToString();
+        lastResult = result; // Store the result
+        
+        // Simple text output without color formatting
+        resultText.text = $"Ball landed on {result}";
+        
+        // Keep the color variable for AI prompt only
+        string resultColor = result == 0 ? "green" : (IsRed(result) ? "red" : "black");
 
         // Process all current bets
-        int totalWinnings = 0;
+        int totalBetAmount = 0;
+        int totalWinAmount = 0;
+        Dictionary<string, int> winningBets = new Dictionary<string, int>();
+        Dictionary<string, int> losingBets = new Dictionary<string, int>();
+
+        // Calculate total bet amount (for display purposes only)
+        foreach (var bet in currentBets)
+        {
+            totalBetAmount += bet.Value;
+        }
+
+        // Process each bet to see which won and which lost
         foreach (var bet in currentBets)
         {
             if (CheckWin(result, bet.Key))
             {
-                totalWinnings += CalculateWinnings(bet.Key, bet.Value);
+                int winAmount = CalculateWinnings(bet.Key, bet.Value);
+                totalWinAmount += winAmount;
+                winningBets.Add(bet.Key, winAmount);
+            }
+            else
+            {
+                losingBets.Add(bet.Key, bet.Value);
             }
         }
 
-        // Display results
-        resultText.text += $"\nTotal Winnings: ${totalWinnings}";
+        // Add winnings to player's balance
+        if (balanceManager != null && totalWinAmount > 0)
+        {
+            balanceManager.AddMoney(totalWinAmount);
+            
+            // Update balance display after adding winnings
+            UpdateBalanceDisplay();
+        }
+
+        // Display simplified results
+        string resultMessage;
+        if (winningBets.Count > 0)
+        {
+            resultMessage = $"\nCongratulations! You won ${totalWinAmount}!";
+        }
+        else
+        {
+            resultMessage = "\nBetter luck next time!";
+        }
         
-        // Reset for next round
+        resultText.text += resultMessage;
+        
+        // Create a description of the bets for AI
+        string betsDescription = "";
+        foreach (var bet in currentBets)
+        {
+            betsDescription += $"{bet.Key}: ${bet.Value}, ";
+        }
+
+        string prompt = $"Roulette wheel landed on {result} ({resultColor}). " +
+                        $"Player's bets were: {betsDescription} " +
+                        $"Total winnings: ${totalWinAmount}. " +
+                        $"Give a brief croupier comment about this roulette spin.";
+
+        // Send to AI
+        if (ApiManager.Instance != null)
+        {
+            ApiManager.Instance.SendGameUpdate(prompt);
+        }
+        
+        // Reset game immediately without delay
         ResetGame();
+    }
+
+    void OnEnable()
+    {
+        UpdateBalanceDisplay();
+    }
+
+    private void ResetGame()
+    {
+        currentBets.Clear();
+        selectedChipValue = 0;
+        bettingOpen = true;
+        isSpinning = false;
+        UpdateBetDisplay();
+        
+        // Reset chip button highlighting
+        foreach (var button in chipButtons)
+        {
+            button.GetComponent<Image>().color = Color.white;
+        }
+        
+        // Don't override the result text - let players see their results until they start a new game
     }
 
     // Processes bet results and calculates winnings based on bet type
     private int CalculateWinnings(string betType, int betAmount)
     {
-        // Multipliers based on standard roulette rules:
-        // Single number (35:1)
-        // Red/Black/Odd/Even/1-18/19-36 (2:1)
-        // Dozens (3:1)
-        switch (betType)
+        // Single number bet (including 0)
+        if (int.TryParse(betType, out int number) && number >= 0 && number <= 36)
         {
-            case "Single Number": return betAmount * 35;
-            case "Red":
-            case "Black":
-            case "Odd":
-            case "Even":
-            case "1-18":
-            case "19-36": return betAmount * 2;
-            case "1st 12":
-            case "2nd 12":
-            case "3rd 12": return betAmount * 3;
-            default: return 0;
+            return betAmount * 36; // 35:1 payout plus original bet
         }
-    }
-
-    private void ResetGame()
-    {
-        timeUntilSpin = spinTime;
-        currentBets.Clear();
-        selectedChipValue = 0;
-        bettingOpen = true;
-        UpdateBetDisplay();
+    
+        // Even money bets
+        if (betType == "Red" || betType == "Black" || 
+            betType == "Odd" || betType == "Even" || 
+            betType == "1to18" || betType == "19to36")
+        {
+            return betAmount * 2; // 1:1 payout plus original bet
+        }
+    
+        // Dozen bets
+        if (betType == "1st 12" || betType == "2nd 12" || betType == "3rd 12")
+        {
+            return betAmount * 3; // 2:1 payout plus original bet
+        }
+    
+        return 0; // Unknown bet type
     }
 
     // Validates if a bet wins based on the spin result
     private bool CheckWin(int result, string betType)
     {
-        // Handles all roulette bet types:
-        // - Colors (Red/Black)
-        // - Odd/Even
-        // - Number ranges (1-18, 19-36)
-        // - Dozens (1st 12, 2nd 12, 3rd 12)
-        // - Single numbers
+        bool isWin = false;
+    
+        // Handles all roulette bet types
         switch (betType)
         {
-            case "Red": return IsRed(result);
-            case "Black": return IsBlack(result);
-            case "Odd": return result % 2 != 0 && result != 0;
-            case "Even": return result % 2 == 0 && result != 0;
-            case "1-18": return result >= 1 && result <= 18;
-            case "19-36": return result >= 19 && result <= 36;
-            case "1st 12": return result >= 1 && result <= 12;
-            case "2nd 12": return result >= 13 && result <= 24;
-            case "3rd 12": return result >= 25 && result <= 36;
+            case "Red":
+                isWin = IsRed(result);
+                Debug.Log($"Checking Red bet with result {result}: {isWin}");
+                break;
+            
+            case "Black":
+                isWin = IsBlack(result);
+                Debug.Log($"Checking Black bet with result {result}: {isWin}");
+                break;
+            
+            case "Odd":
+                isWin = result % 2 != 0 && result != 0;
+                Debug.Log($"Checking Odd bet with result {result}: {isWin}");
+                break;
+            
+            case "Even":
+                isWin = result % 2 == 0 && result != 0;
+                Debug.Log($"Checking Even bet with result {result}: {isWin}");
+                break;
+            
+            case "1-18":
+                isWin = result >= 1 && result <= 18;
+                Debug.Log($"Checking 1-18 bet with result {result}: {isWin}");
+                break;
+            
+            case "19-36":
+                isWin = result >= 19 && result <= 36;
+                Debug.Log($"Checking 19-36 bet with result {result}: {isWin}");
+                break;
+            
+            case "1st 12":
+                isWin = result >= 1 && result <= 12;
+                Debug.Log($"Checking 1st 12 bet with result {result}: {isWin}");
+                break;
+            
+            case "2nd 12":
+                isWin = result >= 13 && result <= 24;
+                Debug.Log($"Checking 2nd 12 bet with result {result}: {isWin}");
+                break;
+            
+            case "3rd 12":
+                isWin = result >= 25 && result <= 36;
+                Debug.Log($"Checking 3rd 12 bet with result {result}: {isWin}");
+                break;
+            
             default:
                 // Check if it's a single number bet
                 if (int.TryParse(betType, out int betNumber))
-                    return result == betNumber;
-                return false;
+                {
+                    isWin = result == betNumber;
+                    Debug.Log($"Checking number bet {betType} with result {result}: {isWin}");
+                }
+                else
+                {
+                    Debug.LogWarning($"Unknown bet type: {betType}");
+                    isWin = false;
+                }
+                break;
         }
+    
+        return isWin;
     }
 
     // Standard roulette wheel red numbers

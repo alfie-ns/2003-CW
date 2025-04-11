@@ -10,12 +10,12 @@ public class ApiManager : MonoBehaviour
 {
     [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // the base url of the django API
     [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
-    [SerializeField] private Text aiResponseText; // ui element to display the AI response
-    [SerializeField] private Button sendRequestButton; // button to trigger an API request
+    [SerializeField] private Button sendRequestButton; 
+    public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
 
-    /// <summary>
+
     /// Sets up the button click listener on start.
-    /// </summary>
+    /// This method is called when the script instance is being loaded.
     private void Start()
     {
         if (sendRequestButton != null)
@@ -24,18 +24,37 @@ public class ApiManager : MonoBehaviour
         }
     }
 
-    /// <summary>
+    /// Initialise singleton instance on game object awake.
+    /// This method is called when the script instance is being loaded.
+    private void Awake()
+    {
+        // Set up singleton for easy access from other scripts
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
     /// Called when the request button is clicked. Sends a prompt to the API.
-    /// </summary>
     /// <param name="prompt">the prompt to send to the AI API.</param>
     private void OnSendRequestClicked(string prompt)
     {
+        Debug.Log("Sending API request with prompt: " + prompt);
         StartCoroutine(PostRequest("/api/sessions/" + sessionId + "/response/", prompt)); // post the request
     }
 
-    /// <summary>
+    /// Public method to allow other scripts to send AI prompts
+    /// <param name="prompt">The prompt to send to the AI API.</param>
+    public void SendGameUpdate(string prompt)
+    {
+        OnSendRequestClicked(prompt);
+    }
+
     /// Sends a post request to the Django API.
-    /// </summary>
     /// <param name="endpoint">The API endpoint to call.</param>
     /// <param name="prompt">The prompt to send in the request body.</param>
     private IEnumerator PostRequest(string endpoint, string prompt)
@@ -58,41 +77,27 @@ public class ApiManager : MonoBehaviour
         }
         else // if the request fails
         {
-            Debug.LogError("Error: " + request.error); // log the error
-            if (aiResponseText != null)
-            {
-                aiResponseText.text = "error connecting to the server."; // display an error message in the ui
-            }
+            Debug.LogError("API Error: " + request.error); // log the error
         }
     }
 
-    /// <summary>
     /// Handles the JSON response from the API.
-    /// </summary>
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse); // parse the json response
-
-        if (aiResponseText != null)
-        {
-            aiResponseText.text = "ai response: " + response.response; // display the ai response in the ui
-        }
+        Debug.Log("AI Response: " + response.response); // output to console instead of UI
     }
 }
 
-/// <summary>
 /// Represents the structure of the API request body.
-/// </summary>
 [System.Serializable]
 public class ApiRequest
 {
     public string prompt; // the prompt sent to the AI API
 }
 
-/// <summary>
 /// Represents the structure of the API response.
-/// </summary>
 [System.Serializable]
 public class ApiResponse
 {
@@ -101,9 +106,7 @@ public class ApiResponse
     public GameState game_state; // the current game state
 }
 
-/// <summary>
 /// Represents the game state structure returned in the API response.
-/// </summary>
 [System.Serializable]
 public class GameState
 {
