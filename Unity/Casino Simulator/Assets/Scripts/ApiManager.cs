@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
-    [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // the base url of the django API
+    [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // localhost API endpoint; will update if deploying to a remote server
     [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
     [SerializeField] private Text aiResponseText; // ui element to display the AI response
     [SerializeField] private Button sendRequestButton; 
@@ -79,10 +79,24 @@ public class ApiManager : MonoBehaviour
         else // if the request fails
         {
             Debug.LogError("Error: " + request.error); 
-            if (aiResponseText != null)
+            // Create a fallback response object to protect the game from breaking during API failure
+            // This ensures the game gracefully degrades instead of crashing
+            ApiResponse fallback = new ApiResponse
             {
-                aiResponseText.text = "error connecting to the server."; // display an error message in the ui
-            }
+                response = "AI is currently unavailable. Please try again shortly.",
+                session_id = sessionId,
+                game_state = new GameState 
+                { 
+                    player_name = "FallbackPlayer",  // dummy data
+                    score = 0, 
+                    level = 1, 
+                    status = "fallback" // custom flag to indicate this is not real data
+                }
+            };
+
+            // Serialise fallback response to JSON so it can be processed like a normal API response
+            string fallbackJson = JsonUtility.ToJson(fallback);
+            HandleApiResponse(fallbackJson); // Handle as if it was a real response
         }
     }
 
