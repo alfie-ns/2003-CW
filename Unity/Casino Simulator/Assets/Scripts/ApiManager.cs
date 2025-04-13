@@ -8,8 +8,9 @@ using UnityEngine.UI;
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
-    [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // the base url of the django API
+    [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // localhost API endpoint; will update if deploying to a remote server
     [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
+    [SerializeField] private Text aiResponseText; // ui element to display the AI response
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
 
@@ -23,6 +24,7 @@ public class ApiManager : MonoBehaviour
             sendRequestButton.onClick.AddListener(() => OnSendRequestClicked("what is the current state of the game?"));
         }
     }
+
 
     /// Initialise singleton instance on game object awake.
     /// This method is called when the script instance is being loaded.
@@ -43,7 +45,6 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">the prompt to send to the AI API.</param>
     private void OnSendRequestClicked(string prompt)
     {
-        Debug.Log("Sending API request with prompt: " + prompt);
         StartCoroutine(PostRequest("/api/sessions/" + sessionId + "/response/", prompt)); // post the request
     }
 
@@ -60,24 +61,42 @@ public class ApiManager : MonoBehaviour
     private IEnumerator PostRequest(string endpoint, string prompt)
     {
         string fullUrl = baseUrl + endpoint; // construct the full url
-        string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt }); // convert the prompt to json
+        string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt }); 
 
-        UnityWebRequest request = new UnityWebRequest(fullUrl, "POST"); // create a new post request
-        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); // encode json to bytes
+        UnityWebRequest request = new UnityWebRequest(fullUrl, "POST"); 
+        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); 
         request.uploadHandler = new UploadHandlerRaw(jsonToSend); // attach JSON payload to the request
         request.downloadHandler = new DownloadHandlerBuffer(); // prepare a buffer to store the response
-        request.SetRequestHeader("Content-Type", "application/json"); // set content type to json
+        request.SetRequestHeader("Content-Type", "application/json"); 
 
         yield return request.SendWebRequest(); // send the request and wait for a response
 
         if (request.result == UnityWebRequest.Result.Success) // check if the request was successful
         {
-            Debug.Log("Response: " + request.downloadHandler.text); // log the response
-            HandleApiResponse(request.downloadHandler.text); // handle the response
+            Debug.Log("Response: " + request.downloadHandler.text); 
+            HandleApiResponse(request.downloadHandler.text); 
         }
         else // if the request fails
         {
-            Debug.LogError("API Error: " + request.error); // log the error
+            Debug.LogError("Error: " + request.error); 
+            // Create a fallback response object to protect the game from breaking during API failure
+            // This ensures the game gracefully degrades instead of crashing
+            ApiResponse fallback = new ApiResponse
+            {
+                response = "AI is currently unavailable. Please try again shortly.",
+                session_id = sessionId,
+                game_state = new GameState 
+                { 
+                    player_name = "FallbackPlayer",  // dummy data
+                    score = 0, 
+                    level = 1, 
+                    status = "fallback" // custom flag to indicate this is not real data
+                }
+            };
+
+            // Serialise fallback response to JSON so it can be processed like a normal API response
+            string fallbackJson = JsonUtility.ToJson(fallback);
+            HandleApiResponse(fallbackJson); // Handle as if it was a real response
         }
     }
 
@@ -85,8 +104,12 @@ public class ApiManager : MonoBehaviour
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
-        ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse); // parse the json response
-        Debug.Log("AI Response: " + response.response); // output to console instead of UI
+        ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
+
+        if (aiResponseText != null)
+        {
+            aiResponseText.text = "ai response: " + response.response; // display the ai response in the ui
+        }
     }
 }
 
@@ -101,17 +124,17 @@ public class ApiRequest
 [System.Serializable]
 public class ApiResponse
 {
-    public string response; // the ai's response
-    public string session_id; // the session id from the response
-    public GameState game_state; // the current game state
+    public string response;
+    public string session_id; 
+    public GameState game_state; 
 }
 
 /// Represents the game state structure returned in the API response.
 [System.Serializable]
 public class GameState
 {
-    public string player_name; // the name of the player
-    public int score; // the player's score
-    public int level; // the player's level
-    public string status; // the status of the game (e.g., "ongoing", "completed")
+    public string player_name; 
+    public int score; 
+    public int level; 
+    public string status; 
 }
