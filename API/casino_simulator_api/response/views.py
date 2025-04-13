@@ -6,7 +6,7 @@ from decouple import config
 import openai
 import os
 
-# Ensure your OpenAI API key is set in your environment variables
+# Ensure the OpenAI API key is set in the environment variables
 openai.api_key = config("OPENAI_API_KEY")
 
 class AIResponseView(APIView):
