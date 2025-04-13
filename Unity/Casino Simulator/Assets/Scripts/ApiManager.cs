@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
-    [SerializeField] private string baseUrl = "http://127.0.0.1:8000"; // localhost API endpoint; will update if deploying to a remote server
+    [SerializeField] private string baseUrl = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
     [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
     [SerializeField] private Text aiResponseText; // ui element to display the AI response
     [SerializeField] private Button sendRequestButton; 
