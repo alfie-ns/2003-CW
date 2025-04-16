@@ -3,13 +3,15 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
+
 /// <summary>
 /// Handles API interactions with the django backend to communicate with openai.
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
-    [SerializeField] private string baseUrl = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
-    [SerializeField] private string sessionId = "c4912571-06da-48e4-8495-62ddf69921f0"; // the session id used for API requests
+    private const string BASE_URL = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
+    private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0";
+
     [SerializeField] private Text aiResponseText; // ui element to display the AI response
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
@@ -45,7 +47,7 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">the prompt to send to the AI API.</param>
     private void OnSendRequestClicked(string prompt)
     {
-        StartCoroutine(PostRequest("/api/sessions/" + sessionId + "/response/", prompt)); // post the request
+        StartCoroutine(PostRequest("/api/sessions/" + SESSION_ID + "/response/", prompt)); // post the request
     }
 
     /// Public method to allow other scripts to send AI prompts
@@ -60,8 +62,9 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">The prompt to send in the request body.</param>
     private IEnumerator PostRequest(string endpoint, string prompt)
     {
-        string fullUrl = baseUrl + endpoint; // construct the full url
-        string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt }); 
+        string fullUrl = BASE_URL + endpoint; // construct the full url
+        string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt });
+
 
         UnityWebRequest request = new UnityWebRequest(fullUrl, "POST"); 
         byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); 
@@ -84,7 +87,7 @@ public class ApiManager : MonoBehaviour
             ApiResponse fallback = new ApiResponse
             {
                 response = "AI is currently unavailable. Please try again shortly.",
-                session_id = sessionId,
+                session_id = SESSION_ID,
                 game_state = new GameState 
                 { 
                     player_name = "FallbackPlayer",  // dummy data
