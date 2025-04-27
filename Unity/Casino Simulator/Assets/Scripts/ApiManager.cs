@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 
 /// <summary>
-/// Handles API interactions with the django backend to communicate with openai.
+/// Handles API interactions with the Django backend to communicate with openai.
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
@@ -16,7 +16,6 @@ public class ApiManager : MonoBehaviour
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
 
-
     /// Sets up the button click listener on start.
     /// This method is called when the script instance is being loaded.
     private void Start()
@@ -26,7 +25,7 @@ public class ApiManager : MonoBehaviour
             sendRequestButton.onClick.AddListener(() => OnSendRequestClicked("what is the current state of the game?"));
         }
     }
-
+ 
 
     /// Initialise singleton instance on game object awake.
     /// This method is called when the script instance is being loaded.
@@ -42,6 +41,7 @@ public class ApiManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
 
     /// Called when the request button is clicked. Sends a prompt to the API.
     /// <param name="prompt">the prompt to send to the AI API.</param>
@@ -95,7 +95,7 @@ public class ApiManager : MonoBehaviour
                         player_name = "FallbackPlayer",  // dummy data
                         score = 0, 
                         level = 1, 
-                        status = "fallback" // custom flag to indicate this is not real data
+                        status = "fallback" // dummy data
                     }
                 };
 
