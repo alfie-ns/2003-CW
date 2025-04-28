@@ -36,6 +36,7 @@ public class SlotMachine : MonoBehaviour
     [Header("Game Interaction")]
     public float interactionRange = 2f;
     public GameObject playerObject;
+    public GameObject interactionPrompt;
 
     [Header("Balance Management")]
     public MonoBehaviour balanceManagerObject; // Reference to the object with IBalanceManager implementation
@@ -93,8 +94,10 @@ public class SlotMachine : MonoBehaviour
 
     void Update()
     {
-        if (!isPlayingSlotMachine && Input.GetKeyDown(KeyCode.E))
+        if (!isPlayingSlotMachine)
         {
+            bool shouldShowPrompt = false;
+
             // First check if player is in range
             float distance = Vector3.Distance(playerObject.transform.position, transform.position);
             
@@ -110,7 +113,12 @@ public class SlotMachine : MonoBehaviour
                         // Check if the object hit is this slot machine
                         if (hit.transform == transform || hit.transform.IsChildOf(transform))
                         {
-                            StartSlotMachine();
+                            shouldShowPrompt = true;
+
+                            if(Input.GetKeyDown(KeyCode.E))
+                            {
+                                StartSlotMachine();
+                            }
                         }
                     }
                 }
@@ -128,7 +136,12 @@ public class SlotMachine : MonoBehaviour
                     // Check if player is roughly facing the slot machine (dot product > 0.5 means < 60 degree angle)
                     if (Vector3.Dot(playerForward.normalized, directionToSlotMachine.normalized) > 0.5f)
                     {
-                        StartSlotMachine();
+                        shouldShowPrompt = true;
+                            
+                        if(Input.GetKeyDown(KeyCode.E))
+                        {
+                            StartSlotMachine();
+                        }
                     }
                     else
                     {
@@ -136,10 +149,21 @@ public class SlotMachine : MonoBehaviour
                     }
                 }
             }
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(shouldShowPrompt);
+            }
         }
         else if (isPlayingSlotMachine && Input.GetKeyDown(KeyCode.Escape))
         {
             ExitSlotMachine();
+        }
+        if(isPlayingSlotMachine)
+        {
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(false);
+            }
         }
         
         if (isPlayingSlotMachine && !isSpinning && autoSpinsRemaining > 0 && canStartNextSpin)

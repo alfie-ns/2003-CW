@@ -25,6 +25,7 @@ public class Blackjack : MonoBehaviour
     public GameObject playerObject;
     public GameObject Crosshair;
     public Transform playerStandPoint;
+    public GameObject interactionPrompt;
     
     [Header("Balance Management")]
     public MonoBehaviour balanceManagerObject;
@@ -75,13 +76,19 @@ public class Blackjack : MonoBehaviour
         // Disable Blackjack UI at start
         if (blackjackUIParent != null)
             blackjackUIParent.SetActive(false);
+        
+        // Disable interaction prompt at start
+        if (interactionPrompt != null)
+            interactionPrompt.SetActive(false);
     }
 
     void Update()
     {
-        if (!isPlayingBlackjack && Input.GetKeyDown(KeyCode.E))
+        if (!isPlayingBlackjack)
         {
-            // First check if player is in range
+            bool shouldShowPrompt = false;
+            
+            // Check if player is in range
             float distance = Vector3.Distance(playerObject.transform.position, transform.position);
         
             if (distance <= interactionRange)
@@ -96,7 +103,12 @@ public class Blackjack : MonoBehaviour
                         // Check if the object hit is this blackjack table
                         if (hit.transform == transform || hit.transform.IsChildOf(transform))
                         {
-                            StartBlackjack();
+                            shouldShowPrompt = true;
+                            
+                            if (Input.GetKeyDown(KeyCode.E))
+                            {
+                                StartBlackjack();
+                            }
                         }
                     }
                 }
@@ -113,14 +125,32 @@ public class Blackjack : MonoBehaviour
                     // Check if player is roughly facing the table (dot product > 0.5 means < 60 degree angle)
                     if (Vector3.Dot(playerForward.normalized, directionToTable.normalized) > 0.5f)
                     {
-                        StartBlackjack();
+                        shouldShowPrompt = true;
+                        
+                        if (Input.GetKeyDown(KeyCode.E))
+                        {
+                            StartBlackjack();
+                        }
                     }
                 }
+            }
+            
+            // Show or hide the interaction prompt based on whether the player is looking at the table
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(shouldShowPrompt);
             }
         }
         else if (isPlayingBlackjack && Input.GetKeyDown(KeyCode.Escape))
         {
             ExitBlackjack();
+        }
+        if(isPlayingBlackjack)
+        {
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(false);
+            }
         }
     }
 
