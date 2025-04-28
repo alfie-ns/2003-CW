@@ -32,6 +32,7 @@ public class Roulette : MonoBehaviour
     public GameObject playerObject;
     public GameObject Crosshair;
     public Transform playerStandPoint;
+    public GameObject interactionPrompt;
     
     [Header("Balance Management")]
     public MonoBehaviour balanceManagerObject; // Reference to the object with IBalanceManager implementation
@@ -49,6 +50,10 @@ public class Roulette : MonoBehaviour
         // Disable Roulette UI at start
         if (rouletteUIParent != null)
             rouletteUIParent.SetActive(false);
+        
+        // Disable interaction prompt at start
+        if (interactionPrompt != null)
+            interactionPrompt.SetActive(false);
     }
     
     void Start()
@@ -118,8 +123,10 @@ public class Roulette : MonoBehaviour
         }
         
         // New interaction code
-        if (!isPlayingRoulette && Input.GetKeyDown(KeyCode.E))
+        if (!isPlayingRoulette)
         {
+            bool shouldShowPrompt = false;
+
             // First check if player is in range
             float distance = Vector3.Distance(playerObject.transform.position, transform.position);
             
@@ -135,7 +142,12 @@ public class Roulette : MonoBehaviour
                         // Check if the object hit is this roulette table
                         if (hit.transform == transform || hit.transform.IsChildOf(transform))
                         {
-                            StartRoulette();
+                            shouldShowPrompt = true;
+
+                            if (Input.GetKeyDown(KeyCode.E))
+                            {
+                                StartRoulette();
+                            }
                         }
                     }
                 }
@@ -154,14 +166,29 @@ public class Roulette : MonoBehaviour
                     // Check if player is roughly facing the table (dot product > 0.5 means < 60 degree angle)
                     if (Vector3.Dot(playerForward.normalized, directionToTable.normalized) > 0.5f)
                     {
-                        StartRoulette();
+                        shouldShowPrompt = true;
+                        if (Input.GetKeyDown(KeyCode.E))
+                        {
+                            StartRoulette();
+                        }
                     }
                 }
+            }
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(shouldShowPrompt);
             }
         }
         else if (isPlayingRoulette && Input.GetKeyDown(KeyCode.Escape))
         {
             ExitRoulette();
+        }
+        if(isPlayingRoulette)
+        {
+            if (interactionPrompt != null)
+            {
+                interactionPrompt.SetActive(false);
+            }
         }
     }
 
