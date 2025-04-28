@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 
 /// <summary>
-/// Handles API interactions with the django backend to communicate with openai.
+/// Handles API interactions with the Django backend to communicate with openai.
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
@@ -16,7 +16,6 @@ public class ApiManager : MonoBehaviour
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
 
-
     /// Sets up the button click listener on start.
     /// This method is called when the script instance is being loaded.
     private void Start()
@@ -26,7 +25,7 @@ public class ApiManager : MonoBehaviour
             sendRequestButton.onClick.AddListener(() => OnSendRequestClicked("what is the current state of the game?"));
         }
     }
-
+ 
 
     /// Initialise singleton instance on game object awake.
     /// This method is called when the script instance is being loaded.
@@ -42,6 +41,7 @@ public class ApiManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
 
     /// Called when the request button is clicked. Sends a prompt to the API.
     /// <param name="prompt">the prompt to send to the AI API.</param>
@@ -64,8 +64,10 @@ public class ApiManager : MonoBehaviour
     {
         string fullUrl = BASE_URL + endpoint; // construct the full url
         string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt });
-
-        using (UnityWebRequest request = new UnityWebRequest(fullUrl, "POST"))
+        // Log the request URL and body
+        Debug.Log("Sending request to: " + fullUrl); 
+        Debug.Log("Request body: " + jsonBody); 
+        using (UnityWebRequest request = new UnityWebRequest(fullUrl, "POST")) // prevent memory leaks  
         {
             byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); 
             request.uploadHandler = new UploadHandlerRaw(jsonToSend); // attach JSON payload to the request
@@ -93,14 +95,15 @@ public class ApiManager : MonoBehaviour
                         player_name = "FallbackPlayer",  // dummy data
                         score = 0, 
                         level = 1, 
-                        status = "fallback" // custom flag to indicate this is not real data
+                        status = "fallback" // dummy data
                     }
                 };
 
                 // Serialise fallback response to JSON so it can be processed like a normal API response
                 string fallbackJson = JsonUtility.ToJson(fallback);
                 HandleApiResponse(fallbackJson); // Handle as if it was a real response
-            }
+
+            } 
         }
     }
 

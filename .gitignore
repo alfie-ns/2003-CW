@@ -13,6 +13,7 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 MemoryCaptures/
+*.dwlt
 
 # Visual Studio / rider
 .vscode/

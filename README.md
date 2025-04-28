@@ -10,17 +10,17 @@
 
 **Casino Simulator** is a semi open-world simulation game where the user starts with an empty casino and a small amount of cash. The player can:
 
-- [ ] Choose what games to play from a selection of slot machines, blackjack, craps, roulette, and pachinko.
-- [ ] Make money from NPCs playing on these machines.
-- [ ] Gamble the money they make on the casino games to either increase or lose their money.
-- [ ] Choose where to place machines and which machines to add.
+- [X] Choose what games to play from a selection of slot machines, blackjack, roulette.
+- [X] Make money from playing on machines.
+- [X] Gamble the money they make on the casino games to either increase or lose their money.
+- [X] Choose where to place machines and which machines to add.
 
-The player's goal is to gain more money and expand the size of the casino. There will be no story mode, but a small tutorial will be included to guide players. The game will be rated **18+** due to its gambling elements.
+The player interacts with any game; Roulette, Blackjack, or Slot Machines. 
 
 ## Development Focus
 
-- **Morgan McGovern & Harrison Buck**: Focus on the main game development and mechanics.
-- **Alfie Nurse**: Focus on AI and algorithm development to control NPC behaviour and game mechanics.
+- Morgan McGovern & Harrison Buck: Focus on the main game development and mechanics.
+- Alfie Nurse: Focus on the Django API and OpenAI integration.
 
 ## Development Notes
 

@@ -29,7 +29,7 @@ class AIResponseView(APIView):
         # Call OpenAI API to generate the response
         try:
             response = openai.chat.completions.create(
-                model="o3-mini", 
+                model="gpt-4.1-mini", 
                 messages=[
                     {"role": "system", "content": "You are assisting with a Casino Simulator game simulation."},
                     {"role": "user", "content": prompt}
