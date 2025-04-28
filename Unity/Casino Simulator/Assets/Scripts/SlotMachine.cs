@@ -575,7 +575,7 @@ public class SlotMachine : MonoBehaviour
                 string symbolsDisplay = string.Join(", ", landedSymbols);
                 string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
                                 $"Player bet ${betAmount} and {(winnings > 0 ? $"won ${winnings}" : "lost")}. " +
-                                $"Give a quick casino host comment about this spin.";
+                                $"Give a quick casino host insightful comment about the percentage of winnings.";
 
                 // Send to AI
                 ApiManager.Instance.SendGameUpdate(prompt);

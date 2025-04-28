@@ -496,7 +496,8 @@ public class Roulette : MonoBehaviour
         string prompt = $"Roulette wheel landed on {result} ({resultColor}). " +
                         $"Player's bets were: {betsDescription} " +
                         $"Total winnings: ${totalWinAmount}. " +
-                        $"Give a brief croupier comment about this roulette spin.";
+                        $"Give a brief croupier comment about this roulette spin; and suggest the next best bet " +
+                        $"based on the last result and the player's current bets.";
 
         // Send to AI
         if (ApiManager.Instance != null)
