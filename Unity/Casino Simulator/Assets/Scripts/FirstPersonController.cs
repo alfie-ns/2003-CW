@@ -8,10 +8,6 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] private float jumpForce = 5.0f;
     [SerializeField] private float gravity = 20.0f;
     
-    [Header("Look Settings")]
-    [SerializeField] private Transform cameraTransform;
-    [SerializeField] private float mouseSensitivity = 2.0f;
-    
     // Component references
     private CharacterController characterController;
     private FirstPersonLook firstPersonLook;
@@ -75,19 +71,5 @@ public class FirstPersonController : MonoBehaviour
         
         // Move the character controller
         characterController.Move(moveDirection * Time.deltaTime);
-    }
-    
-    // Public method to teleport the player to a specific position
-    public void TeleportTo(Vector3 position)
-    {
-        characterController.enabled = false;
-        transform.position = position;
-        characterController.enabled = true;
-    }
-    
-    // Toggle player movement enabled/disabled
-    public void SetMovementEnabled(bool enabled)
-    {
-        this.enabled = enabled;
     }
 }

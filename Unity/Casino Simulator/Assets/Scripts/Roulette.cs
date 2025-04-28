@@ -168,13 +168,6 @@ public class Roulette : MonoBehaviour
     void StartRoulette()
     {
         isPlayingRoulette = true;
-
-        // Find and disable other game UIs
-        GameObject blackjackUI = GameObject.Find("blackjackUIParent");
-        if (blackjackUI != null)
-        {
-            blackjackUI.SetActive(false);
-        }
         
         Crosshair.SetActive(false); // Hide crosshair when playing Roulette
 
@@ -309,14 +302,6 @@ public class Roulette : MonoBehaviour
             // New chip selected, update the selected value
             selectedChipValue = value;
         }
-    
-        // Highlight the selected chip button (optional UI feedback)
-        for (int i = 0; i < chipButtons.Length; i++)
-        {
-            chipButtons[i].GetComponent<Image>().color = 
-                (chipButtons[i].GetComponentInChildren<TextMeshProUGUI>().text == value.ToString()) 
-                ? Color.yellow : Color.white;
-        }
     }
 
     public void PlaceBet(string betType)
@@ -348,16 +333,6 @@ public class Roulette : MonoBehaviour
         else
             currentBets[betType] = selectedChipValue;
 
-        // Provide visual feedback that the bet was placed
-        foreach (Button button in betOptionButtons)
-        {
-            if (button.GetComponentInChildren<TextMeshProUGUI>().text == betType)
-            {
-                StartCoroutine(FlashButton(button));
-                break;
-            }
-        }
-
         UpdateBetDisplay();
     }
 
@@ -365,22 +340,6 @@ public class Roulette : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
         resultText.text = textToRestore;
-    }
-
-    private System.Collections.IEnumerator FlashButton(Button button)
-    {
-        ColorBlock colors = button.colors;
-        Color originalColor = colors.normalColor;
-    
-        // Flash to a highlight color
-        colors.normalColor = new Color(0.8f, 0.8f, 0.2f); // Gold-ish color
-        button.colors = colors;
-    
-        yield return new WaitForSeconds(0.1f);
-    
-        // Return to original color
-        colors.normalColor = originalColor;
-        button.colors = colors;
     }
 
     void UpdateBetDisplay()
@@ -522,11 +481,6 @@ public class Roulette : MonoBehaviour
         ResetGame();
     }
 
-    void OnEnable()
-    {
-        UpdateBalanceDisplay();
-    }
-
     private void ResetGame()
     {
         currentBets.Clear();
@@ -534,14 +488,6 @@ public class Roulette : MonoBehaviour
         bettingOpen = true;
         isSpinning = false;
         UpdateBetDisplay();
-        
-        // Reset chip button highlighting
-        foreach (var button in chipButtons)
-        {
-            button.GetComponent<Image>().color = Color.white;
-        }
-        
-        // Don't override the result text - let players see their results until they start a new game
     }
 
     // Processes bet results and calculates winnings based on bet type
@@ -598,12 +544,12 @@ public class Roulette : MonoBehaviour
                 Debug.Log($"Checking Even bet with result {result}: {isWin}");
                 break;
             
-            case "1-18":
+            case "1to18":
                 isWin = result >= 1 && result <= 18;
                 Debug.Log($"Checking 1-18 bet with result {result}: {isWin}");
                 break;
             
-            case "19-36":
+            case "19to36":
                 isWin = result >= 19 && result <= 36;
                 Debug.Log($"Checking 19-36 bet with result {result}: {isWin}");
                 break;

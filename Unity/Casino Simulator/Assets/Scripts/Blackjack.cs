@@ -128,13 +128,6 @@ public class Blackjack : MonoBehaviour
     {
         isPlayingBlackjack = true;
 
-        // Find and disable the SlotMachine UI first
-        GameObject slotMachineUI = GameObject.Find("slotMachineUIParent");
-        if (slotMachineUI != null)
-        {
-            slotMachineUI.SetActive(false);
-        }
-
         Crosshair.SetActive(false); // Hide crosshair when playing Blackjack
 
         // Get and disable player components first
