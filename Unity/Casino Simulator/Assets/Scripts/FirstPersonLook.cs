@@ -56,23 +56,4 @@ public class FirstPersonLook : MonoBehaviour
             playerBody.Rotate(Vector3.up * currentMouseDelta.x);
         }
     }
-    
-    // Reset camera rotation
-    public void ResetRotation()
-    {
-        rotationX = 0f;
-        transform.localRotation = Quaternion.identity;
-    }
-    
-    // Set custom rotation
-    public void SetRotation(float verticalAngle, float horizontalAngle)
-    {
-        rotationX = verticalAngle;
-        transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-        
-        if (playerBody != null)
-        {
-            playerBody.rotation = Quaternion.Euler(0, horizontalAngle, 0);
-        }
-    }
 }

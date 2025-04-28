@@ -5,12 +5,13 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 
-public class SlotMachine : MonoBehaviour, IPointerClickHandler
+public class SlotMachine : MonoBehaviour
 {
     // Enum definition needs to be outside of any attribute
     public enum PositionDirection { Left, Right, Forward, Back, Custom }
 
     // Configuration for betting limits and auto-spin options
+    [Header("Game Configuration")]
     public int minBet = 1;
     public int maxBet = 100;
     public int[] autoSpinOptions = { 10, 25, 50, 100, 200, 500 };
@@ -29,7 +30,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     public GameObject[] rollers; // The spinning reels of the slot machine
     public TMP_Text resultText; // Displays win/lose outcome
     public TMP_Text autoSpinText;
-    public TMP_Text amountText;
     public TMP_Text balanceText; // Shows current balance
     public GameObject slotMachineUIParent; // Parent object containing all UI elements
 
@@ -69,7 +69,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         // Initialize bet amount to minimum bet
         betAmount = minBet;
         UpdateBetAmountText();
-        UpdateAutoSpinButtonText();
     
         // Get the balance manager
         if (balanceManagerObject != null)
@@ -84,10 +83,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         {
             Debug.LogError("Balance Manager object not assigned in inspector!");
         }
-    
-        // Disable UI at start
-        if (slotMachineUIParent != null)
-            slotMachineUIParent.SetActive(false);
     }
     void Awake()
     {
@@ -155,7 +150,7 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
             // Start a coroutine to handle the delay
             StartCoroutine(DelayedAutoSpin());
         }
-            if (isPlayingSlotMachine && !isSpinning && Input.GetMouseButtonDown(0))
+        if (isPlayingSlotMachine && !isSpinning && Input.GetMouseButtonDown(0))
         {
             // First check if we're clicking on a UI element using EventSystem
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
@@ -192,31 +187,26 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
                 else if (hitObject == increaseBetButton)
                 {
                     IncreaseBet();
-                    Debug.Log("Clicked increase bet button");
                     break;
                 }
                 else if (hitObject == decreaseBetButton)
                 {
                     DecreaseBet();
-                    Debug.Log("Clicked decrease bet button");
                     break;
                 }
                 else if (hitObject == autoSpinButton)
                 {
                     CycleAutoSpinOption();
-                    Debug.Log("Clicked auto spin button");
                     break;
                 }
                 else if (hitObject == startAutoSpinButton)
                 {
                     StartAutoSpins();
-                    Debug.Log("Clicked start auto spin button");
                     break;
                 }
                 else if (hitObject == stopAutoSpinButton)
                 {
                     StopAutoSpins();
-                    Debug.Log("Clicked stop auto spin button");
                     break;
                 }
             }
@@ -235,13 +225,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
     
         // Update the balance display - KEEP THIS SEPARATE FROM BET AMOUNT
         UpdateBalanceDisplay();
-
-            // Find and disable the Blackjack UI first
-            GameObject blackjackUI = GameObject.Find("blackjackUIParent");
-            if (blackjackUI != null)
-            {
-                blackjackUI.SetActive(false);
-            }
 
             // Get and disable player components first
             playerController = playerObject.GetComponent<CharacterController>();
@@ -364,7 +347,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         if (resultText != null) resultText.enabled = isActive;
         if (autoSpinText != null) autoSpinText.enabled = isActive;
         if (betAmountText != null) betAmountText.enabled = isActive;
-        if (amountText != null) amountText.enabled = isActive;
     }
 
     public void SetBetAmount(int amount)
@@ -422,14 +404,6 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         UpdateAutoSpinCounterText();
     }
 
-    private void UpdateAutoSpinButtonText()
-    {
-        if (autoSpinText != null)
-        {
-            autoSpinText.text = autoSpinOptions[currentAutoSpinIndex].ToString();
-        }
-    }
-
     public void StartAutoSpins()
     {
         autoSpinsRemaining = autoSpinOptions[currentAutoSpinIndex];
@@ -469,44 +443,10 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         stopTimes = new float[rollers.Length];
         for (int i = 0; i < rollers.Length; i++)
         {
-            stopTimes[i] = Time.time + Random.Range(1f, 3f) + i * 0.5f; // Staggered stop times
+            // Reduce spin time from 1-3 seconds to 0.5-1.0 seconds with smaller stagger
+            stopTimes[i] = Time.time + Random.Range(0.5f, 0.8f) + i * 0.2f;
         }
         StartCoroutine(SpinSlots());
-    }
-
-    // IPointerClickHandler implementation - for GameObject interaction
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        
-        if (isPlayingSlotMachine && !isSpinning)
-        {
-            GameObject clickedObject = eventData.pointerCurrentRaycast.gameObject;
-
-            if (clickedObject == increaseBetButton)
-            {
-                IncreaseBet();
-            }
-            else if (clickedObject == decreaseBetButton)
-            {
-                DecreaseBet();
-            }
-            else if (clickedObject == autoSpinButton)
-            {
-                CycleAutoSpinOption();
-            }
-            else if (clickedObject == startAutoSpinButton)
-            {
-                StartAutoSpins();
-            }
-            else if (clickedObject == stopAutoSpinButton)
-            {
-                StopAutoSpins();
-            }
-            else if (clickedObject == leverObject)
-            {
-                StartSpin();
-            }
-        }
     }
 
     // Spinning mechanics
@@ -516,112 +456,43 @@ public class SlotMachine : MonoBehaviour, IPointerClickHandler
         if (resultText != null)
             resultText.text = "";
     
-        // Initialize spinning state for all rollers
-        bool[] rollerStopped = new bool[rollers.Length];
-        float[] spinSpeeds = new float[rollers.Length];
-        float[] decelerationRates = new float[rollers.Length];
+        // Generate random target symbols for each slot position
         int[] targetSymbolIndices = new int[rollers.Length];
-    
-        // Set up initial speeds and target indices for each roller
         for (int i = 0; i < rollers.Length; i++)
         {
-            rollerStopped[i] = false;
-            spinSpeeds[i] = Random.Range(720f, 1080f); // Initial speed (degrees/second)
-            decelerationRates[i] = spinSpeeds[i] / (stopTimes[i] - Time.time); // Calculate deceleration
             targetSymbolIndices[i] = Random.Range(0, symbols.Length);
         }
-    
-        // Main spin loop
-        while (isSpinning)
+        
+        // Simulate spinning time without actually rotating objects
+        float spinDuration = 1.5f; // Total spin animation time
+        float startTime = Time.time;
+        
+        // Wait for spin duration
+        while (Time.time < startTime + spinDuration)
         {
-            bool allStopped = true;
-        
-            for (int i = 0; i < rollers.Length; i++)
-            {
-                if (!rollerStopped[i])
-                {
-                    // Rotate the roller based on current speed
-                    rollers[i].transform.Rotate(0, spinSpeeds[i] * Time.deltaTime, 0);
-                
-                    // Decrease speed over time
-                    if (Time.time < stopTimes[i])
-                    {
-                        // Still spinning at full or reducing speed
-                        spinSpeeds[i] = Mathf.Max(spinSpeeds[i] - (decelerationRates[i] * Time.deltaTime), 0);
-                        allStopped = false;
-                    }
-                    else
-                    {
-                        // Time to stop - align to exact symbol position
-                        float targetAngle = 360.0f / symbols.Length * targetSymbolIndices[i];
-                    
-                        // Get current rotation in 0-360 range
-                        float currentAngle = rollers[i].transform.eulerAngles.y % 360;
-                    
-                        // Calculate shortest distance to target angle
-                        float angleDifference = Mathf.DeltaAngle(currentAngle, targetAngle);
-                    
-                        if (Mathf.Abs(angleDifference) < 2.0f || spinSpeeds[i] < 1.0f)
-                        {
-                            // Close enough or moving too slowly, snap to exact position
-                            rollers[i].transform.rotation = Quaternion.Euler(0, targetAngle, 0);
-                            rollerStopped[i] = true;
-                        }
-                        else
-                        {
-                            // Still need to align - move slowly toward target
-                            float alignSpeed = Mathf.Min(spinSpeeds[i], Mathf.Abs(angleDifference) * 2);
-                            float direction = Mathf.Sign(angleDifference);
-                        
-                            rollers[i].transform.Rotate(0, alignSpeed * direction * Time.deltaTime, 0);
-                            spinSpeeds[i] = Mathf.Max(spinSpeeds[i] * 0.95f, 20f); // Slow down but keep minimum speed
-                        
-                            allStopped = false;
-                        }
-                    }
-                }
-            }
-        
-            if (allStopped)
-            {
-                isSpinning = false;
-                yield return new WaitForSeconds(0.5f); // Short pause before showing result
-                CheckWin();
-            }
-        
             yield return null;
         }
-    }
-
-    private IEnumerator SpinRoller(GameObject roller, int symbolIndex)
-    {
-        // Define the target rotation based on the symbol index
-        float targetAngle = 360.0f / symbols.Length * symbolIndex;
-
-        // Define the duration of the spin
-        float duration = 0.1f; // Quick rotation
-        float elapsedTime = 0.0f;
-
-        // Get the initial rotation
-        Quaternion initialRotation = roller.transform.rotation;
-        Quaternion finalRotation = Quaternion.Euler(0, targetAngle, 0);
-
-        // Animate the rotation
-        while (elapsedTime < duration)
+        
+        // Set final positions directly
+        for (int i = 0; i < rollers.Length; i++)
         {
-            elapsedTime += Time.deltaTime;
-            roller.transform.rotation = Quaternion.Slerp(initialRotation, finalRotation, elapsedTime / duration);
-            yield return null;
+            // Set the final rotation to show the target symbol
+            float targetAngle = 360.0f / symbols.Length * targetSymbolIndices[i];
+            rollers[i].transform.rotation = Quaternion.Euler(0, targetAngle, 0);
         }
-
-        // Ensure the roller stops exactly at the target angle
-        roller.transform.rotation = finalRotation;
+        
+        // Spinning is complete
+        isSpinning = false;
+        
+        // Short pause before checking win
+        yield return new WaitForSeconds(0.2f);
+        CheckWin();
     }
 
     private IEnumerator DelayedAutoSpin()
     {
-        // Wait to show the previous result
-        yield return new WaitForSeconds(2.0f);
+        // Reduce wait time between auto spins
+        yield return new WaitForSeconds(1.0f);
 
         // Start the next spin
         StartSpin();
