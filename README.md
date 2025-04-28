@@ -8,7 +8,7 @@
 
 ## Start-up Idea
 
-**Casino Simulator** is a semi open-world simulation game where the user starts with an empty casino and a small amount of cash. The player can:
+**Casino Simulator** is a free-roam casino simulation game where the user starts with an empty casino and a small amount of cash. The player can:
 
 - [X] Choose what games to play from a selection of slot machines, blackjack, roulette.
 - [X] Make money from playing on machines.
