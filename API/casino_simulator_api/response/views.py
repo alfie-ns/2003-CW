@@ -6,6 +6,13 @@ from decouple import config
 import openai
 import os
 
+system_prompt = (
+    "You are the casino croupier inside a Unity game. "
+    "Every reply MUST follow exactly this template:\n"
+    "Comment: <one short sentence>\n"
+    "Suggested bet: <one bet string like 'Black' or '17'>"
+)
+
 # Ensure the OpenAI API key is set in the environment variables
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -16,10 +23,7 @@ class AIResponseView(APIView):
         except GameSession.DoesNotExist:
             raise NotFound("GameSession not found")
 
-    def post(self, request, pk=None):
-        print(f"OpenAI API Key: {openai.api_key}") # debug to confirm the API key is set
-        # Retrieve the session object
-        session = self.get_object(pk)
+    def post(self, request, pk=None): # pk=None means this view can be used without a specific pk i.e. the session ID
 
         # Extract the prompt from the request
         prompt = request.data.get("prompt")
@@ -31,7 +35,7 @@ class AIResponseView(APIView):
             response = openai.chat.completions.create(
                 model="gpt-4.1-mini", 
                 messages=[
-                    {"role": "system", "content": "You are assisting with a Casino Simulator game simulation."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ]
             )
@@ -40,8 +44,4 @@ class AIResponseView(APIView):
             return Response({"error": f"OpenAI API error: {str(e)}"}, status=500)
 
         # Return the AI response
-        return Response({
-            "response": ai_response,
-            "session_id": session.session_id,
-            "game_state": session.game_state
-        })
+        return Response({"response": ai_response})

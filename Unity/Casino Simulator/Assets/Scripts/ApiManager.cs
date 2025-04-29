@@ -89,14 +89,6 @@ public class ApiManager : MonoBehaviour
                 ApiResponse fallback = new ApiResponse
                 {
                     response = "AI is currently unavailable. Please try again shortly.",
-                    session_id = SESSION_ID,
-                    game_state = new GameState 
-                    { 
-                        player_name = "FallbackPlayer",  // dummy data
-                        score = 0, 
-                        level = 1, 
-                        status = "fallback" // dummy data
-                    }
                 };
 
                 // Serialise fallback response to JSON so it can be processed like a normal API response
@@ -112,11 +104,29 @@ public class ApiManager : MonoBehaviour
     private void HandleApiResponse(string jsonResponse)
     {
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
-
+        
+        // extract just the "Comment" part explicitly
+        string comment = ExtractComment(response.response);
+        
         if (aiResponseText != null)
         {
-            aiResponseText.text = "ai response: " + response.response; // display the ai response in the ui
+            aiResponseText.text = comment;  // only the relevant text shown
         }
+    }
+
+    // Helper method to parse out just the "Comment"
+    private string ExtractComment(string aiFullResponse)
+    {
+        if (string.IsNullOrEmpty(aiFullResponse)) return "No response from AI.";
+        
+        // Split by newline and take the first line
+        string[] lines = aiFullResponse.Split('\n');
+        if (lines.Length > 0 && lines[0].StartsWith("Comment:"))
+        {
+            return lines[0].Replace("Comment:", "").Trim();
+        }
+
+        return aiFullResponse; // fallback in case of unexpected format
     }
 }
 
@@ -132,8 +142,6 @@ public class ApiRequest
 public class ApiResponse
 {
     public string response;
-    public string session_id; 
-    public GameState game_state; 
 }
 
 /// Represents the game state structure returned in the API response.
