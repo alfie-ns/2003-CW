@@ -7,6 +7,7 @@ public class FirstPersonLook : MonoBehaviour
     [SerializeField] private float smoothing = 2.0f;
     [SerializeField] private float minVerticalAngle = -90.0f;
     [SerializeField] private float maxVerticalAngle = 90.0f;
+    [SerializeField] private bool invertY = false;
     
     [Header("References")]
     [SerializeField] private Transform playerBody;
@@ -16,6 +17,10 @@ public class FirstPersonLook : MonoBehaviour
     private Vector2 currentMouseDelta = Vector2.zero;
     private Vector2 currentMouseDeltaVelocity = Vector2.zero;
     
+    // Reference to pause menu to check pause state
+    private PauseMenu pauseMenu;
+    private bool isGamePaused = false;
+    
     private void Start()
     {
         // If no player body is assigned, try to get parent
@@ -24,13 +29,44 @@ public class FirstPersonLook : MonoBehaviour
             playerBody = transform.parent;
         }
         
+        // Find pause menu reference
+        pauseMenu = FindObjectOfType<PauseMenu>();
+        
         // Lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        
+        // Load settings from PlayerPrefs if they exist
+        LoadSettings();
+    }
+    
+    private void LoadSettings()
+    {
+        if (PlayerPrefs.HasKey("Sensitivity"))
+        {
+            mouseSensitivity = PlayerPrefs.GetFloat("Sensitivity");
+        }
+        
+        if (PlayerPrefs.HasKey("InvertY"))
+        {
+            invertY = PlayerPrefs.GetInt("InvertY") == 1;
+        }
     }
     
     private void Update()
     {
+        // Check if game is paused (either by time scale or by checking pause menu)
+        isGamePaused = Time.timeScale == 0f || (pauseMenu != null && pauseMenu.IsPaused());
+        
+        // Don't process mouse input if game is paused
+        if (isGamePaused)
+        {
+            // Reset deltas when paused to prevent camera jump when unpausing
+            currentMouseDelta = Vector2.zero;
+            currentMouseDeltaVelocity = Vector2.zero;
+            return;
+        }
+        
         // Get mouse input
         Vector2 targetMouseDelta = new Vector2(
             Input.GetAxis("Mouse X") * mouseSensitivity,
@@ -46,7 +82,9 @@ public class FirstPersonLook : MonoBehaviour
         );
         
         // Adjust vertical rotation (pitch - looking up and down)
-        rotationX -= currentMouseDelta.y;
+        // Apply invert Y if enabled
+        float verticalDelta = invertY ? currentMouseDelta.y : -currentMouseDelta.y;
+        rotationX += verticalDelta;
         rotationX = Mathf.Clamp(rotationX, minVerticalAngle, maxVerticalAngle);
         transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
         
@@ -55,5 +93,29 @@ public class FirstPersonLook : MonoBehaviour
         {
             playerBody.Rotate(Vector3.up * currentMouseDelta.x);
         }
+    }
+    
+    // Method for SettingsMenu to change sensitivity
+    public void SetSensitivity(float sensitivity)
+    {
+        mouseSensitivity = sensitivity;
+    }
+    
+    // Method for SettingsMenu to change invert Y setting
+    public void SetInvertY(bool invert)
+    {
+        invertY = invert;
+    }
+    
+    // For use by other scripts that may need the current sensitivity value
+    public float GetSensitivity()
+    {
+        return mouseSensitivity;
+    }
+    
+    // For use by other scripts that may need the current invert Y setting
+    public bool GetInvertY()
+    {
+        return invertY;
     }
 }

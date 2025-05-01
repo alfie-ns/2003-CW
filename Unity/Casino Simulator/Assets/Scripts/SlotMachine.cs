@@ -154,7 +154,7 @@ public class SlotMachine : MonoBehaviour
                 interactionPrompt.SetActive(shouldShowPrompt);
             }
         }
-        else if (isPlayingSlotMachine && Input.GetKeyDown(KeyCode.Escape))
+        else if (isPlayingSlotMachine && Input.GetKeyDown(KeyCode.E))
         {
             ExitSlotMachine();
         }

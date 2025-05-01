@@ -179,7 +179,7 @@ public class Roulette : MonoBehaviour
                 interactionPrompt.SetActive(shouldShowPrompt);
             }
         }
-        else if (isPlayingRoulette && Input.GetKeyDown(KeyCode.Escape))
+        else if (isPlayingRoulette && Input.GetKeyDown(KeyCode.E))
         {
             ExitRoulette();
         }
@@ -627,5 +627,11 @@ public class Roulette : MonoBehaviour
     {
         int[] blackNumbers = { 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 };
         return System.Array.IndexOf(blackNumbers, number) >= 0;
+    }
+
+    // Add this public method:
+    public bool IsPlayingRoulette()
+    {
+        return isPlayingRoulette;
     }
 }

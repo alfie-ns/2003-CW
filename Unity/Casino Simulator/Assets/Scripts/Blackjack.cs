@@ -141,7 +141,7 @@ public class Blackjack : MonoBehaviour
                 interactionPrompt.SetActive(shouldShowPrompt);
             }
         }
-        else if (isPlayingBlackjack && Input.GetKeyDown(KeyCode.Escape))
+        else if (isPlayingBlackjack && Input.GetKeyDown(KeyCode.E))
         {
             ExitBlackjack();
         }
@@ -497,5 +497,10 @@ public class Blackjack : MonoBehaviour
         isPlayerTurn = false;
         currentBet = 0;
         UpdateUI();
+    }
+
+    public bool IsPlayingBlackjack()
+    {
+        return isPlayingBlackjack;
     }
 }
