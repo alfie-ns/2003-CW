@@ -4,7 +4,12 @@ from rest_framework.exceptions import NotFound
 from .models import GameSession
 from decouple import config
 import openai
-import os
+
+system_message = '''
+Respond as follows:
+- How their bet went
+- What they should do next
+'''
 
 # Ensure the OpenAI API key is set in the environment variables
 openai.api_key = config("OPENAI_API_KEY")
@@ -32,6 +37,7 @@ class AIResponseView(APIView):
                 model="gpt-4.1-mini", 
                 messages=[
                     {"role": "system", "content": "You are assisting with a Casino Simulator game simulation."},
+                    {"role": "user", "content": system_message},
                     {"role": "user", "content": prompt}
                 ]
             )

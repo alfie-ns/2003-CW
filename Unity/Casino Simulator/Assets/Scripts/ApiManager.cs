@@ -2,30 +2,55 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using TMPro;
 
 
 /// <summary>
-/// Handles API interactions with the Django backend to communicate with openai.
+/// Handles API interactions with the Django backend to communicate with OpenAI.
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
     private const string BASE_URL = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
-    private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0";
+    private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0"; 
 
-    [SerializeField] private Text aiResponseText; // ui element to display the AI response
+    [SerializeField] private TMPro.TextMeshProUGUI aiResponseText; // UI element to display the AI response; now TextMeshProUGUI opposed to a simple Text component
     [SerializeField] private Button sendRequestButton; 
-    public static ApiManager Instance { get; private set; } // singleton instance of ApiManager
+    public static ApiManager Instance { get; private set; } // Singleton instance of ApiManager
+    private string lastAIResponse = "";
+    private System.Action<string> responseCallback;
 
-    /// Sets up the button click listener on start.
-    /// This method is called when the script instance is being loaded.
     private void Start()
     {
-        if (sendRequestButton != null)
+        // Find the AIResponseText component at runtime
+        if (aiResponseText == null)
         {
-            sendRequestButton.onClick.AddListener(() => OnSendRequestClicked("what is the current state of the game?"));
+            aiResponseText = GameObject.Find("AIResponseText").GetComponent<TMPro.TextMeshProUGUI>();
+            if (aiResponseText != null)
+            {
+                Debug.Log("Found AIResponseText successfully!");
+            }
+            else
+            {
+                Debug.LogError("Could not find AIResponseText component!");
+            }
         }
     }
- 
+
+    /// Register a callback to be invoked when a response is received from the API.
+    /// This method allows other scripts to register a callback function that will be called with the AI response.
+    /// <param name="callback">The callback function to register.</param>
+    public void RegisterResponseCallback(System.Action<string> callback)
+    {
+        responseCallback = callback;
+    }
+
+    /// Get the most recent AI response.
+    /// This method is used to retrieve the latest which is used to display the AI response in the UI.
+    /// <returns>The last AI response string.</returns>
+    public string GetLastResponse()
+    {
+        return lastAIResponse;
+    }
 
     /// Initialise singleton instance on game object awake.
     /// This method is called when the script instance is being loaded.
@@ -43,8 +68,9 @@ public class ApiManager : MonoBehaviour
     }
 
 
-    /// Called when the request button is clicked. Sends a prompt to the API.
-    /// <param name="prompt">the prompt to send to the AI API.</param>
+    /// Sends the specified prompt to the API endpoint. 
+    /// This method can be triggered by a button click or called programmatically. 
+    /// <param name="prompt">The prompt to send to the AI API.</param>
     private void OnSendRequestClicked(string prompt)
     {
         StartCoroutine(PostRequest("/api/sessions/" + SESSION_ID + "/response/", prompt)); // post the request
@@ -56,6 +82,7 @@ public class ApiManager : MonoBehaviour
     {
         OnSendRequestClicked(prompt);
     }
+
 
     /// Sends a post request to the Django API.
     /// <param name="endpoint">The API endpoint to call.</param>
@@ -107,16 +134,24 @@ public class ApiManager : MonoBehaviour
         }
     }
 
+
     /// Handles the JSON response from the API.
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
 
+        // Store the last response
+        lastAIResponse = response.response;
+
+        // Update UI if assigned
         if (aiResponseText != null)
         {
-            aiResponseText.text = "ai response: " + response.response; // display the ai response in the ui
+            aiResponseText.text = response.response;
         }
+
+        // Notify any registered callbacks
+        responseCallback?.Invoke(response.response);
     }
 }
 
