@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: c0ec41c593501c646b8fc9a2d678d56d
+  - enabled: 1
     path: Assets/Scenes/Casino.unity
     guid: 28af96321d0714f4b9eeeb98ffb25e33
   m_configObjects: {}
