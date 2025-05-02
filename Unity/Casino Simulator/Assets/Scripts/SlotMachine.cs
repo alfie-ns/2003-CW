@@ -143,10 +143,6 @@ public class SlotMachine : MonoBehaviour
                             StartSlotMachine();
                         }
                     }
-                    else
-                    {
-                        Debug.Log("Player is not facing the slot machine");
-                    }
                 }
             }
             if (interactionPrompt != null)

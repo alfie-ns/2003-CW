@@ -148,7 +148,6 @@ public class PauseMenu : MonoBehaviour
         SettingsMenu settingsMenuComponent = settingsPanel.GetComponent<SettingsMenu>();
         if (settingsMenuComponent != null)
         {
-            Debug.Log("Setting IsFromPauseMenu = true");
             settingsMenuComponent.IsFromPauseMenu = true;
         }
         else
@@ -159,7 +158,6 @@ public class PauseMenu : MonoBehaviour
 
     public void ShowPauseMenu()
     {
-        Debug.Log("ShowPauseMenu called in PauseMenu"); // Debug logging
         HideAllPanels();
         pauseMenuPanel.SetActive(true);
         
@@ -194,9 +192,6 @@ public class PauseMenu : MonoBehaviour
         if (saveSystem != null)
         {
             saveSystem.SaveGame();
-            
-            // Optional: Show a temporary "Game Saved" message
-            Debug.Log("Game saved successfully");
         }
         else
         {
@@ -206,7 +201,6 @@ public class PauseMenu : MonoBehaviour
             if (saveSystem != null)
             {
                 saveSystem.SaveGame();
-                Debug.Log("Game saved successfully");
             }
             else
             {

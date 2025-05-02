@@ -555,47 +555,38 @@ public class Roulette : MonoBehaviour
         {
             case "Red":
                 isWin = IsRed(result);
-                Debug.Log($"Checking Red bet with result {result}: {isWin}");
                 break;
             
             case "Black":
                 isWin = IsBlack(result);
-                Debug.Log($"Checking Black bet with result {result}: {isWin}");
                 break;
             
             case "Odd":
                 isWin = result % 2 != 0 && result != 0;
-                Debug.Log($"Checking Odd bet with result {result}: {isWin}");
                 break;
             
             case "Even":
                 isWin = result % 2 == 0 && result != 0;
-                Debug.Log($"Checking Even bet with result {result}: {isWin}");
                 break;
             
             case "1to18":
                 isWin = result >= 1 && result <= 18;
-                Debug.Log($"Checking 1-18 bet with result {result}: {isWin}");
                 break;
             
             case "19to36":
                 isWin = result >= 19 && result <= 36;
-                Debug.Log($"Checking 19-36 bet with result {result}: {isWin}");
                 break;
             
             case "1st 12":
                 isWin = result >= 1 && result <= 12;
-                Debug.Log($"Checking 1st 12 bet with result {result}: {isWin}");
                 break;
             
             case "2nd 12":
                 isWin = result >= 13 && result <= 24;
-                Debug.Log($"Checking 2nd 12 bet with result {result}: {isWin}");
                 break;
             
             case "3rd 12":
                 isWin = result >= 25 && result <= 36;
-                Debug.Log($"Checking 3rd 12 bet with result {result}: {isWin}");
                 break;
             
             default:
@@ -603,7 +594,6 @@ public class Roulette : MonoBehaviour
                 if (int.TryParse(betType, out int betNumber))
                 {
                     isWin = result == betNumber;
-                    Debug.Log($"Checking number bet {betType} with result {result}: {isWin}");
                 }
                 else
                 {

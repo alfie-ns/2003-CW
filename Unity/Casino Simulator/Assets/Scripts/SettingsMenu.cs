@@ -149,7 +149,6 @@ public class SettingsMenu : MonoBehaviour
         // Handle back navigation with escape key
         if (Input.GetKeyDown(backKey))
         {
-            Debug.Log("Escape key pressed in Settings Menu");
             ShowSaveConfirmation();
         }
     }
@@ -268,7 +267,6 @@ public class SettingsMenu : MonoBehaviour
 
     public void GoBack()
     {
-        Debug.Log("GoBack called in SettingsMenu");
         ShowSaveConfirmation();
     }
 
@@ -367,8 +365,6 @@ public class SettingsMenu : MonoBehaviour
 
     public void ShowSaveConfirmation()
     {
-        Debug.Log("Showing settings save confirmation");
-        
         // Show the confirmation panel
         if (settingsSaveConfirmationPanel != null)
         {
@@ -427,8 +423,6 @@ public class SettingsMenu : MonoBehaviour
         // Return to the appropriate menu
         if (isFromPauseMenu)
         {
-            Debug.Log("Returning to pause menu");
-            
             // Get a direct reference to the PauseMenu in the scene
             PauseMenu pauseMenuInScene = FindObjectOfType<PauseMenu>();
             

@@ -37,8 +37,6 @@ public class ApiManager : MonoBehaviour
         
         // Initialize shouldShowPrompts from PlayerPrefs (default to true if not set)
         shouldShowPrompts = PlayerPrefs.GetInt(AI_PROMPTS_KEY, 1) == 1;
-        
-        Debug.Log($"API Manager initialized with shouldShowPrompts = {shouldShowPrompts}");
     }
 
     private void Start()
@@ -51,9 +49,7 @@ public class ApiManager : MonoBehaviour
             {
                 aiResponseText = textObject.GetComponent<TMPro.TextMeshProUGUI>();
                 if (aiResponseText != null)
-                {
-                    Debug.Log("Found AIResponseText successfully!");
-                    
+                {   
                     // Set initial visibility based on saved preference
                     aiResponseText.gameObject.SetActive(shouldShowPrompts);
                 }
@@ -112,9 +108,6 @@ public class ApiManager : MonoBehaviour
     {
         string fullUrl = BASE_URL + endpoint; // construct the full url
         string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt });
-        // Log the request URL and body
-        Debug.Log("Sending request to: " + fullUrl); 
-        Debug.Log("Request body: " + jsonBody); 
         using (UnityWebRequest request = new UnityWebRequest(fullUrl, "POST")) // prevent memory leaks  
         {
             byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); 
@@ -126,7 +119,6 @@ public class ApiManager : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success) // check if the request was successful
             {
-                Debug.Log("Response: " + request.downloadHandler.text); 
                 HandleApiResponse(request.downloadHandler.text); 
             }
             else // if the request fails
@@ -182,8 +174,6 @@ public class ApiManager : MonoBehaviour
         // Store setting in PlayerPrefs for persistence
         PlayerPrefs.SetInt(AI_PROMPTS_KEY, enabled ? 1 : 0);
         PlayerPrefs.Save();
-        
-        Debug.Log($"AI prompts {(enabled ? "enabled" : "disabled")}");
         
         // Find and enable/disable AI prompt display elements
         if (aiResponseText != null)

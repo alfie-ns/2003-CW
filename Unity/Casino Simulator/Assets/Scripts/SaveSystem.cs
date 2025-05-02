@@ -29,7 +29,6 @@ public class SaveSystem : MonoBehaviour
     [Header("Auto Save Settings")]
     [SerializeField] private bool autoSaveEnabled = true;
     [SerializeField] private int autoSaveIntervalMinutes = 5;
-    [SerializeField] private bool showSaveNotifications = true;
     
     [Header("Scene Settings")]
     [SerializeField] private string casinoSceneName = "Casino";
@@ -195,11 +194,6 @@ public class SaveSystem : MonoBehaviour
         
         // Write to file
         File.WriteAllText(saveFilePath, jsonData);
-        
-        if (showSaveNotifications)
-        {
-            Debug.Log("Game saved successfully: " + saveFilePath);
-        }
     }
 
     private void AutoSaveGame()
@@ -209,12 +203,6 @@ public class SaveSystem : MonoBehaviour
             return;
             
         SaveGame();
-        
-        if (showSaveNotifications)
-        {
-            // You might want to show an auto-save notification to the player here
-            Debug.Log("Game auto-saved");
-        }
     }
 
     public void LoadGame()
@@ -264,8 +252,6 @@ public class SaveSystem : MonoBehaviour
             // Apply saved settings
             this.autoSaveEnabled = saveData.autoSaveEnabled;
             this.autoSaveIntervalMinutes = saveData.autoSaveIntervalMinutes;
-            
-            Debug.Log("Game loaded successfully from: " + saveFilePath);
         }
         catch (System.Exception e)
         {
@@ -288,12 +274,6 @@ public class SaveSystem : MonoBehaviour
             
             // Delete the save file
             File.Delete(saveFilePath);
-            
-            Debug.Log("Save file reset. Backup created at: " + backupPath);
-        }
-        else
-        {
-            Debug.Log("No save file exists to reset");
         }
     }
 
