@@ -45,6 +45,7 @@ public class Blackjack : MonoBehaviour
     private int playerValue;
     private int dealerValue;
 
+
     // Card class to represent individual cards
     private class Card
     {
@@ -424,6 +425,7 @@ public class Blackjack : MonoBehaviour
             {
                 balanceManager.AddMoney(currentBet * 2);
                 resultText.text = "You Win!";
+                SoundManager.Instance.PlayWinSound();
 
                 // After determining the winner and setting resultText
                 string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
@@ -437,10 +439,13 @@ public class Blackjack : MonoBehaviour
             {
                 balanceManager.AddMoney(currentBet);
                 resultText.text = "Push";
+                SoundManager.Instance.PlayButtonClick();
+
             }
             else
             {
                 resultText.text = "You Lose";
+                SoundManager.Instance.PlayLoseSound();
             }
         }
 
