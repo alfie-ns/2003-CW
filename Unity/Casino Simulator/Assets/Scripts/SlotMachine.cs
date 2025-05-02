@@ -573,7 +573,7 @@ public class SlotMachine : MonoBehaviour
                 // Update the balance display after adding winnings
                 UpdateBalanceDisplay();
 
-                if (autoSpinsRemaining <= 0)
+                if (autoSpinsRemaining <= 0 && ApiManager.Instance.shouldShowPrompts)
                 {
                     // Prepare prompt for AI response
                     string symbolsDisplay = string.Join(", ", landedSymbols);
@@ -601,7 +601,7 @@ public class SlotMachine : MonoBehaviour
             {
                 resultText.text = "You lose!";
 
-                if (autoSpinsRemaining <= 0)
+                if (autoSpinsRemaining <= 0 && ApiManager.Instance.shouldShowPrompts)
                 {
                     // Prepare prompt for AI response
                     string symbolsDisplay = string.Join(", ", landedSymbols);

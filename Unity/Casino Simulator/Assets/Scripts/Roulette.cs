@@ -495,14 +495,14 @@ public class Roulette : MonoBehaviour
             betsDescription += $"{bet.Key}: ${bet.Value}, ";
         }
 
-        string prompt = $"Roulette wheel landed on {result} ({resultColor}). " +
-                        $"Player's bets were: {betsDescription} " +
-                        $"Total winnings: ${totalWinAmount}. " +
-                        $"Give a brief croupier comment about this roulette spin.";
-
-        // Send to AI
-        if (ApiManager.Instance != null)
+        if (ApiManager.Instance.shouldShowPrompts)
         {
+            string prompt = $"Roulette wheel landed on {result} ({resultColor}). " +
+                            $"Player's bets were: {betsDescription} " +
+                            $"Total winnings: ${totalWinAmount}. " +
+                            $"Give a brief croupier comment about this roulette spin.";
+
+            // Send to AI
             ApiManager.Instance.SendGameUpdate(prompt);
         }
         

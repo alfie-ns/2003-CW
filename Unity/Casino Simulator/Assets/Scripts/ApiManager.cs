@@ -4,7 +4,6 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
 
-
 /// <summary>
 /// Handles API interactions with the Django backend to communicate with OpenAI.
 /// </summary>
@@ -12,27 +11,66 @@ public class ApiManager : MonoBehaviour
 {
     private const string BASE_URL = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
     private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0"; 
+    private const string AI_PROMPTS_KEY = "AIPrompts"; // Same key used in SettingsMenu
 
     [SerializeField] private TMPro.TextMeshProUGUI aiResponseText; // UI element to display the AI response; now TextMeshProUGUI opposed to a simple Text component
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // Singleton instance of ApiManager
     private string lastAIResponse = "";
     private System.Action<string> responseCallback;
+    public bool shouldShowPrompts;
+
+    /// Initialise singleton instance on game object awake.
+    /// This method is called when the script instance is being loaded.
+    private void Awake()
+    {
+        // Set up singleton for easy access from other scripts
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+        
+        // Initialize shouldShowPrompts from PlayerPrefs (default to true if not set)
+        shouldShowPrompts = PlayerPrefs.GetInt(AI_PROMPTS_KEY, 1) == 1;
+        
+        Debug.Log($"API Manager initialized with shouldShowPrompts = {shouldShowPrompts}");
+    }
 
     private void Start()
     {
         // Find the AIResponseText component at runtime
         if (aiResponseText == null)
         {
-            aiResponseText = GameObject.Find("AIResponseText").GetComponent<TMPro.TextMeshProUGUI>();
-            if (aiResponseText != null)
+            GameObject textObject = GameObject.Find("AIResponseText");
+            if (textObject != null)
             {
-                Debug.Log("Found AIResponseText successfully!");
+                aiResponseText = textObject.GetComponent<TMPro.TextMeshProUGUI>();
+                if (aiResponseText != null)
+                {
+                    Debug.Log("Found AIResponseText successfully!");
+                    
+                    // Set initial visibility based on saved preference
+                    aiResponseText.gameObject.SetActive(shouldShowPrompts);
+                }
+                else
+                {
+                    Debug.LogError("Could not find TextMeshProUGUI component on AIResponseText GameObject!");
+                }
             }
             else
             {
-                Debug.LogError("Could not find AIResponseText component!");
+                Debug.LogError("Could not find AIResponseText GameObject!");
             }
+        }
+        else
+        {
+            // Set initial visibility based on saved preference
+            aiResponseText.gameObject.SetActive(shouldShowPrompts);
         }
     }
 
@@ -52,22 +90,6 @@ public class ApiManager : MonoBehaviour
         return lastAIResponse;
     }
 
-    /// Initialise singleton instance on game object awake.
-    /// This method is called when the script instance is being loaded.
-    private void Awake()
-    {
-        // Set up singleton for easy access from other scripts
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-
     /// Sends the specified prompt to the API endpoint. 
     /// This method can be triggered by a button click or called programmatically. 
     /// <param name="prompt">The prompt to send to the AI API.</param>
@@ -82,7 +104,6 @@ public class ApiManager : MonoBehaviour
     {
         OnSendRequestClicked(prompt);
     }
-
 
     /// Sends a post request to the Django API.
     /// <param name="endpoint">The API endpoint to call.</param>
@@ -134,7 +155,6 @@ public class ApiManager : MonoBehaviour
         }
     }
 
-
     /// Handles the JSON response from the API.
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
@@ -156,8 +176,16 @@ public class ApiManager : MonoBehaviour
 
     public void SetPromptsEnabled(bool enabled)
     {
+        // Store the setting in local variable
+        shouldShowPrompts = enabled;
+        
+        // Store setting in PlayerPrefs for persistence
+        PlayerPrefs.SetInt(AI_PROMPTS_KEY, enabled ? 1 : 0);
+        PlayerPrefs.Save();
+        
+        Debug.Log($"AI prompts {(enabled ? "enabled" : "disabled")}");
+        
         // Find and enable/disable AI prompt display elements
-        // If you have a specific dialog object or text component:
         if (aiResponseText != null)
         {
             aiResponseText.gameObject.SetActive(enabled);
@@ -172,7 +200,16 @@ public class ApiManager : MonoBehaviour
     
     public void ClearPrompt()
     {
-        aiResponseText.text = "";
+        if (aiResponseText != null)
+        {
+            aiResponseText.text = "";
+        }
+    }
+    
+    // This helper method can be called from other scripts to check if prompts should be shown
+    public bool ShouldShowPrompts()
+    {
+        return shouldShowPrompts;
     }
 }
 

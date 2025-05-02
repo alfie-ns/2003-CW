@@ -427,13 +427,16 @@ public class Blackjack : MonoBehaviour
                 balanceManager.AddMoney(currentBet * 2);
                 resultText.text = "You Win!";
 
-                // After determining the winner and setting resultText
-                string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
-                                $"The result was: {resultText.text}. " +
-                                $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
+                if (ApiManager.Instance.shouldShowPrompts)
+                {
+                    // After determining the winner and setting resultText
+                    string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
+                                    $"The result was: {resultText.text}. " +
+                                    $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
 
-                // Send to AI
-                ApiManager.Instance.SendGameUpdate(prompt);
+                    // Send to AI
+                    ApiManager.Instance.SendGameUpdate(prompt);
+                }
             }
             else if (playerValue == dealerValue)
             {
@@ -443,13 +446,16 @@ public class Blackjack : MonoBehaviour
             else
             {
                 resultText.text = "You Lose";
-                // After determining the winner and setting resultText
-                string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
-                                $"The result was: {resultText.text}. " +
-                                $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
+                if (ApiManager.Instance.shouldShowPrompts)
+                {
+                    // After determining the winner and setting resultText
+                    string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
+                                    $"The result was: {resultText.text}. " +
+                                    $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
 
-                // Send to AI
-                ApiManager.Instance.SendGameUpdate(prompt);
+                    // Send to AI
+                    ApiManager.Instance.SendGameUpdate(prompt);
+                }
             }
         }
 
@@ -470,13 +476,16 @@ public class Blackjack : MonoBehaviour
     void ProcessBust()
     {
         resultText.text = "Bust!";
-        // After determining the winner and setting resultText
-        string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
-                        $"The result was: {resultText.text}. " +
-                        $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
+        if (ApiManager.Instance.shouldShowPrompts)
+        {
+            // After determining the winner and setting resultText
+            string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
+                            $"The result was: {resultText.text}. " +
+                            $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
 
-        // Send to AI
-        ApiManager.Instance.SendGameUpdate(prompt);
+            // Send to AI
+            ApiManager.Instance.SendGameUpdate(prompt);
+        }
         currentBet = 0;
         SetGameButtonsInteractable(false);
         dealButton.interactable = true;
