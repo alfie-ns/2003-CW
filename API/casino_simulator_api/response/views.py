@@ -6,6 +6,8 @@ from decouple import config
 import openai
 
 system_message = '''
+You are assisting with a Casino Simulator game simulation.
+
 Respond as follows:
 - How their bet went
 - What they should do next
@@ -36,8 +38,7 @@ class AIResponseView(APIView):
             response = openai.chat.completions.create(
                 model="gpt-4.1-mini", 
                 messages=[
-                    {"role": "system", "content": "You are assisting with a Casino Simulator game simulation."},
-                    {"role": "user", "content": system_message},
+                    {"role": "system", "content": system_message},
                     {"role": "user", "content": prompt}
                 ]
             )
