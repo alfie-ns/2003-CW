@@ -443,6 +443,8 @@ public class SlotMachine : MonoBehaviour
     public void StartSpin()
     {
         if (isSpinning) return;
+
+        ApiManager.Instance.ClearPrompt();
     
         // Check if player has enough money to place the bet
         if (balanceManager == null)
@@ -571,14 +573,17 @@ public class SlotMachine : MonoBehaviour
                 // Update the balance display after adding winnings
                 UpdateBalanceDisplay();
 
-                // Prepare prompt for AI response
-                string symbolsDisplay = string.Join(", ", landedSymbols);
-                string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
-                                $"Player bet ${betAmount} and {(winnings > 0 ? $"won ${winnings}" : "lost")}. " +
-                                $"Give a quick casino host insightful comment about the percentage of winnings.";
+                if (autoSpinsRemaining <= 0)
+                {
+                    // Prepare prompt for AI response
+                    string symbolsDisplay = string.Join(", ", landedSymbols);
+                    string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
+                                    $"Player bet ${betAmount} and {(winnings > 0 ? $"won ${winnings}" : "lost")}. " +
+                                    $"Give a quick casino host insightful comment about the percentage of winnings.";
 
-                // Send to AI
-                ApiManager.Instance.SendGameUpdate(prompt);
+                    // Send to AI
+                    ApiManager.Instance.SendGameUpdate(prompt);
+                }
             }
             else
             {
@@ -596,14 +601,17 @@ public class SlotMachine : MonoBehaviour
             {
                 resultText.text = "You lose!";
 
-                // Add AI commentary for losses too
-                string symbolsDisplay = string.Join(", ", landedSymbols);
-                string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
-                                $"Player bet ${betAmount} and lost. " +
-                                $"Give a quick casino host comment about this unlucky spin.";
-                
-                // Send to AI
-                ApiManager.Instance.SendGameUpdate(prompt);
+                if (autoSpinsRemaining <= 0)
+                {
+                    // Prepare prompt for AI response
+                    string symbolsDisplay = string.Join(", ", landedSymbols);
+                    string prompt = $"Slot machine landed on: {symbolsDisplay}. " +
+                                    $"Player bet ${betAmount} and lost. " +
+                                    $"Give a quick casino host comment about this unlucky spin.";
+
+                    // Send to AI
+                    ApiManager.Instance.SendGameUpdate(prompt);
+                }
             }
             else
             {

@@ -153,6 +153,27 @@ public class ApiManager : MonoBehaviour
         // Notify any registered callbacks
         responseCallback?.Invoke(response.response);
     }
+
+    public void SetPromptsEnabled(bool enabled)
+    {
+        // Find and enable/disable AI prompt display elements
+        // If you have a specific dialog object or text component:
+        if (aiResponseText != null)
+        {
+            aiResponseText.gameObject.SetActive(enabled);
+        }
+    
+        // If disabled, clear any current prompt
+        if (!enabled)
+        {
+            ClearPrompt();
+        }
+    }
+    
+    public void ClearPrompt()
+    {
+        aiResponseText.text = "";
+    }
 }
 
 /// Represents the structure of the API request body.

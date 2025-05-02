@@ -26,6 +26,9 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private TMP_Dropdown autoSaveIntervalDropdown;
     [SerializeField] private int[] autoSaveIntervalOptions = { 5, 10, 30 }; // Save interval options in minutes
 
+    [Header("AI Settings")]
+    [SerializeField] private Toggle aiPromptsToggle;
+
     [Header("Confirmation Prompt")]
     [SerializeField] private GameObject settingsSaveConfirmationPanel;
     [SerializeField] private Button saveAndExitButton;
@@ -41,8 +44,8 @@ public class SettingsMenu : MonoBehaviour
     // PlayerPrefs keys
     private const string SENSITIVITY_KEY = "Sensitivity";
     private const string INVERT_Y_KEY = "InvertY";
+    private const string AI_PROMPTS_KEY = "AIPrompts";
 
-    // Add this property to allow setting isFromPauseMenu from PauseMenu
     public bool IsFromPauseMenu 
     { 
         get { return isFromPauseMenu; }
@@ -101,6 +104,11 @@ public class SettingsMenu : MonoBehaviour
             autoSaveToggle.onValueChanged.AddListener(OnAutoSaveToggleChanged);
         }
         
+        if (aiPromptsToggle != null)
+        {
+            aiPromptsToggle.onValueChanged.AddListener(OnAIPromptsToggleChanged);
+        }
+        
         // Setup the confirmation panel buttons
         if (saveAndExitButton != null)
         {
@@ -123,6 +131,7 @@ public class SettingsMenu : MonoBehaviour
     {
         LoadSettings();
         LoadAutoSaveSettings();
+        LoadAISettings();
         
         // Apply the loaded settings to the first person controller
         if (firstPersonLook == null)
@@ -170,6 +179,9 @@ public class SettingsMenu : MonoBehaviour
         
         if (invertYAxisToggle != null)
             PlayerPrefs.SetInt(INVERT_Y_KEY, invertYAxisToggle.isOn ? 1 : 0);
+            
+        if (aiPromptsToggle != null)
+            PlayerPrefs.SetInt(AI_PROMPTS_KEY, aiPromptsToggle.isOn ? 1 : 0);
         
         PlayerPrefs.Save();
     }
@@ -296,6 +308,37 @@ public class SettingsMenu : MonoBehaviour
                 
                 autoSaveIntervalDropdown.value = dropdownIndex;
             }
+        }
+    }
+
+    private void LoadAISettings()
+    {
+        // Load AI prompts setting (default to true/enabled)
+        bool aiPromptsEnabled = PlayerPrefs.GetInt(AI_PROMPTS_KEY, 1) == 1;
+        
+        // Apply loaded value to UI
+        if (aiPromptsToggle != null)
+            aiPromptsToggle.isOn = aiPromptsEnabled;
+            
+        // Apply setting to any AI prompt components in the scene
+        ApplyAIPromptsSetting(aiPromptsEnabled);
+    }
+    
+    public void OnAIPromptsToggleChanged(bool enabled)
+    {
+        ApplyAIPromptsSetting(enabled);
+    }
+    
+    private void ApplyAIPromptsSetting(bool enabled)
+    {
+        // Save the setting
+        PlayerPrefs.SetInt(AI_PROMPTS_KEY, enabled ? 1 : 0);
+        PlayerPrefs.Save();
+        
+        // Find and update all AI prompt objects in the scene
+        if (ApiManager.Instance != null)
+        {
+            ApiManager.Instance.SetPromptsEnabled(enabled);
         }
     }
 
