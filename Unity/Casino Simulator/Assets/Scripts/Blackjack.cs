@@ -45,6 +45,7 @@ public class Blackjack : MonoBehaviour
     private int playerValue;
     private int dealerValue;
 
+
     // Card class to represent individual cards
     private class Card
     {
@@ -426,6 +427,7 @@ public class Blackjack : MonoBehaviour
             {
                 balanceManager.AddMoney(currentBet * 2);
                 resultText.text = "You Win!";
+                SoundManager.Instance.PlayWinSound();
 
                 if (ApiManager.Instance.shouldShowPrompts)
                 {
@@ -442,6 +444,8 @@ public class Blackjack : MonoBehaviour
             {
                 balanceManager.AddMoney(currentBet);
                 resultText.text = "Push";
+                SoundManager.Instance.PlayButtonClick();
+
             }
             else
             {

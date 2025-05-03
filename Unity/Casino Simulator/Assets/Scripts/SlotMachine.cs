@@ -410,6 +410,9 @@ public class SlotMachine : MonoBehaviour
     
         // Apply the new bet amount
         SetBetAmount(predefinedBets[currentBetIndex]);
+
+        SoundManager.Instance.PlayButtonClick();
+
     }
 
     private void DecreaseBet()
@@ -589,6 +592,8 @@ public class SlotMachine : MonoBehaviour
             if (resultText != null)
             {
                 resultText.text = $"You win ${winnings}!";
+                SoundManager.Instance.PlayWinSound();
+
             }
         }
         else  // winnings is 0 or less
@@ -596,6 +601,8 @@ public class SlotMachine : MonoBehaviour
             if (resultText != null)
             {
                 resultText.text = "You lose!";
+                SoundManager.Instance.PlayLoseSound();
+
 
                 if (autoSpinsRemaining <= 0 && ApiManager.Instance.shouldShowPrompts)
                 {
