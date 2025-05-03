@@ -410,33 +410,35 @@ public class SlotMachine : MonoBehaviour
     
         // Apply the new bet amount
         SetBetAmount(predefinedBets[currentBetIndex]);
-
         SoundManager.Instance.PlayButtonClick();
-
     }
 
     private void DecreaseBet()
     {
         currentBetIndex = Mathf.Max(currentBetIndex - 1, 0);
         SetBetAmount(predefinedBets[currentBetIndex]);
+        SoundManager.Instance.PlayButtonClick();
     }
 
     private void CycleAutoSpinOption()
     {
         currentAutoSpinIndex = (currentAutoSpinIndex + 1) % autoSpinOptions.Length;
         UpdateAutoSpinCounterText();
+        SoundManager.Instance.PlayButtonClick();
     }
 
     public void StartAutoSpins()
     {
         autoSpinsRemaining = autoSpinOptions[currentAutoSpinIndex];
         UpdateAutoSpinCounterText();
+        SoundManager.Instance.PlayButtonClick();
     }
 
     public void StopAutoSpins()
     {
         autoSpinsRemaining = 0;
         UpdateAutoSpinCounterText();
+        SoundManager.Instance.PlayButtonClick();
     }
 
     public void StartSpin()
@@ -593,7 +595,6 @@ public class SlotMachine : MonoBehaviour
             {
                 resultText.text = $"You win ${winnings}!";
                 SoundManager.Instance.PlayWinSound();
-
             }
         }
         else  // winnings is 0 or less
@@ -602,7 +603,6 @@ public class SlotMachine : MonoBehaviour
             {
                 resultText.text = "You lose!";
                 SoundManager.Instance.PlayLoseSound();
-
 
                 if (autoSpinsRemaining <= 0 && ApiManager.Instance.shouldShowPrompts)
                 {

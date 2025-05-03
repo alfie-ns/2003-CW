@@ -481,15 +481,13 @@ public class Roulette : MonoBehaviour
         {
             resultMessage = $"\nCongratulations! You won ${totalWinAmount}!";
             SoundManager.Instance.PlayWinSound();
-
         }
         else
         {
             resultMessage = "\nBetter luck next time!";
             SoundManager.Instance.PlayLoseSound();
-
         }
-
+        
         resultText.text += resultMessage;
         
         // Create a description of the bets for AI

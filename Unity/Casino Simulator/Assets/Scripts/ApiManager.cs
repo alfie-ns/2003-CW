@@ -2,9 +2,10 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// Handles API interactions with the Django backend to communicate with openai.
+/// Handles API interactions with the Django backend to communicate with OpenAI.
 /// </summary>
 public class ApiManager : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class ApiManager : MonoBehaviour
     private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0"; 
     private const string AI_PROMPTS_KEY = "AIPrompts"; // Same key used in SettingsMenu
 
-    [SerializeField] private Text aiResponseText; // ui element to display the AI response
+    [SerializeField] private TMPro.TextMeshProUGUI aiResponseText; // UI element to display the AI response; now TextMeshProUGUI opposed to a simple Text component
     [SerializeField] private Button sendRequestButton; 
     public static ApiManager Instance { get; private set; } // Singleton instance of ApiManager
     private string lastAIResponse = "";
@@ -34,15 +35,14 @@ public class ApiManager : MonoBehaviour
             return;
         }
         
-        // Initialize shouldShowPrompts from PlayerPrefs (default to true if not set)
+        // Initialise shouldShowPrompts from PlayerPrefs (default to true if not set)
         shouldShowPrompts = PlayerPrefs.GetInt(AI_PROMPTS_KEY, 1) == 1;
     }
 
-    /// Sets up the button click listener on start.
-    /// This method is called when the script instance is being loaded.
     private void Start()
     {
-        if (sendRequestButton != null)
+        // Find the AIResponseText component at runtime
+        if (aiResponseText == null)
         {
             GameObject textObject = GameObject.Find("AIResponseText");
             if (textObject != null)
@@ -69,7 +69,22 @@ public class ApiManager : MonoBehaviour
             aiResponseText.gameObject.SetActive(shouldShowPrompts);
         }
     }
- 
+
+    /// Register a callback to be invoked when a response is received from the API.
+    /// This method allows other scripts to register a callback function that will be called with the AI response.
+    /// <param name="callback">The callback function to register.</param>
+    public void RegisterResponseCallback(System.Action<string> callback)
+    {
+        responseCallback = callback;
+    }
+
+    /// Get the most recent AI response.
+    /// This method is used to retrieve the latest which is used to display the AI response in the UI.
+    /// <returns>The last AI response string.</returns>
+    public string GetLastResponse()
+    {
+        return lastAIResponse;
+    }
 
     /// Sends the specified prompt to the API endpoint. 
     /// This method can be triggered by a button click or called programmatically. 
@@ -114,6 +129,14 @@ public class ApiManager : MonoBehaviour
                 ApiResponse fallback = new ApiResponse
                 {
                     response = "AI is currently unavailable. Please try again shortly.",
+                    session_id = SESSION_ID,
+                    game_state = new GameState 
+                    { 
+                        player_name = "FallbackPlayer",  // dummy data
+                        score = 0, 
+                        level = 1, 
+                        status = "fallback" // dummy data
+                    }
                 };
 
                 // Serialise fallback response to JSON so it can be processed like a normal API response
@@ -129,29 +152,18 @@ public class ApiManager : MonoBehaviour
     private void HandleApiResponse(string jsonResponse)
     {
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
-        
-        // extract just the "Comment" part explicitly
-        string comment = ExtractComment(response.response);
-        
+
+        // Store the last response
+        lastAIResponse = response.response;
+
+        // Update UI if assigned
         if (aiResponseText != null)
         {
-            aiResponseText.text = comment;  // only the relevant text shown
-        }
-    }
-
-    // Helper method to parse out just the "Comment"
-    private string ExtractComment(string aiFullResponse)
-    {
-        if (string.IsNullOrEmpty(aiFullResponse)) return "No response from AI.";
-        
-        // Split by newline and take the first line
-        string[] lines = aiFullResponse.Split('\n');
-        if (lines.Length > 0 && lines[0].StartsWith("Comment:"))
-        {
-            return lines[0].Replace("Comment:", "").Trim();
+            aiResponseText.text = response.response;
         }
 
-        return aiFullResponse; // fallback in case of unexpected format
+        // Notify any registered callbacks
+        responseCallback?.Invoke(response.response);
     }
 
     public void SetPromptsEnabled(bool enabled)
@@ -203,6 +215,8 @@ public class ApiRequest
 public class ApiResponse
 {
     public string response;
+    public string session_id; 
+    public GameState game_state; 
 }
 
 /// Represents the game state structure returned in the API response.
