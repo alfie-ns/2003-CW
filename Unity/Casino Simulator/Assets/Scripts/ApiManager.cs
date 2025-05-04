@@ -98,6 +98,7 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">The prompt to send to the AI API.</param>
     public void SendGameUpdate(string prompt)
     {
+        //Debug.Log($"[API] Sending prompt to API: {prompt}");
         OnSendRequestClicked(prompt);
     }
 
@@ -126,12 +127,20 @@ public class ApiManager : MonoBehaviour
                 Debug.LogError("Error: " + request.error); 
                 // Create a fallback response object to protect the game from breaking during API failure
                 // This ensures the game gracefully degrades instead of crashing
-                ApiResponse fallback = new ApiResponse
+                AIResponseData fallbackAIResponse = new AIResponseData
                 {
+                    session = SESSION_ID,
+                    prompt = prompt,
                     response = "AI is currently unavailable. Please try again shortly.",
+                    timestamp = System.DateTime.UtcNow.ToString("o")
+                };
+
+                SessionData fallbackSession = new SessionData
+                {
                     session_id = SESSION_ID,
-                    game_state = new GameState 
-                    { 
+                    created_at = System.DateTime.UtcNow.ToString("o"),
+                    game_state = new GameState
+                    {
                         player_name = "FallbackPlayer",  // dummy data
                         score = 0, 
                         level = 1, 
@@ -139,11 +148,16 @@ public class ApiManager : MonoBehaviour
                     }
                 };
 
+                ApiResponse fallback = new ApiResponse
+                {
+                    ai_response = fallbackAIResponse,
+                    session = fallbackSession
+                };
+
                 // Serialise fallback response to JSON so it can be processed like a normal API response
                 string fallbackJson = JsonUtility.ToJson(fallback);
                 HandleApiResponse(fallbackJson); // Handle as if it was a real response
-
-            } 
+            }
         }
     }
 
@@ -151,20 +165,65 @@ public class ApiManager : MonoBehaviour
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
-        ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
+        //Debug.Log($"[API] Raw JSON to parse: {jsonResponse}");
 
-        // Store the last response
-        lastAIResponse = response.response;
-
-        // Update UI if assigned
-        if (aiResponseText != null)
+        try
         {
-            aiResponseText.text = response.response;
-        }
+            // First try parsing the new structure
+            ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
 
-        // Notify any registered callbacks
-        responseCallback?.Invoke(response.response);
+            // Check if we're getting proper response text from the nested structure
+            bool validNestedResponse = response != null &&
+                                      response.ai_response != null &&
+                                      !string.IsNullOrEmpty(response.ai_response.response);
+
+            if (validNestedResponse)
+            {
+                // Successfully parsed the new structure
+                //Debug.Log($"[API] Successfully parsed nested structure");
+                lastAIResponse = response.ai_response.response;
+
+                if (aiResponseText != null)
+                {
+                    aiResponseText.text = lastAIResponse;
+                    //Debug.Log($"[API] Set UI text to: {lastAIResponse}");
+                }
+
+                // Notify any registered callbacks
+                responseCallback?.Invoke(lastAIResponse);
+            }
+            else
+            {
+                // Try parsing the old structure as fallback
+                OldApiResponse oldResponse = JsonUtility.FromJson<OldApiResponse>(jsonResponse);
+
+                if (oldResponse != null && !string.IsNullOrEmpty(oldResponse.response))
+                {
+                    //Debug.Log($"[API] Parsed using old format structure");
+                    lastAIResponse = oldResponse.response;
+
+                    if (aiResponseText != null)
+                    {
+                        aiResponseText.text = lastAIResponse;
+                        //Debug.Log($"[API] Set UI text to: {lastAIResponse}");
+                    }
+
+                    // Notify any registered callbacks
+                    responseCallback?.Invoke(lastAIResponse);
+                }
+                else
+                {
+                    Debug.LogError("[API] Failed to parse response with both old and new formats");
+                    Debug.Log($"[API] Response content: {jsonResponse}");
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[API] Exception during parsing: {ex.Message}");
+        }
     }
+
 
     public void SetPromptsEnabled(bool enabled)
     {
@@ -203,6 +262,43 @@ public class ApiManager : MonoBehaviour
     }
 }
 
+/// Represents the structure of the API response.
+[System.Serializable]
+public class ApiResponse
+{
+    public AIResponseData ai_response;
+    public SessionData session;
+}
+
+/// Represents the AI response data from the API.
+[System.Serializable]
+public class AIResponseData
+{
+    public string session;
+    public string prompt;
+    public string response;
+    public string timestamp;
+}
+
+/// Represents the session data from the API.
+[System.Serializable]
+public class SessionData
+{
+    public string session_id;
+    public string created_at;
+    public GameState game_state;
+}
+
+/// Represents the game state structure returned in the API response.
+[System.Serializable]
+public class GameState
+{
+    public string player_name;
+    public int score;
+    public int level;
+    public string status;
+}
+
 /// Represents the structure of the API request body.
 [System.Serializable]
 public class ApiRequest
@@ -210,21 +306,12 @@ public class ApiRequest
     public string prompt; // the prompt sent to the AI API
 }
 
-/// Represents the structure of the API response.
+
+// old api format; fallback parser
 [System.Serializable]
-public class ApiResponse
+public class OldApiResponse
 {
     public string response;
-    public string session_id; 
-    public GameState game_state; 
-}
-
-/// Represents the game state structure returned in the API response.
-[System.Serializable]
-public class GameState
-{
-    public string player_name; 
-    public int score; 
-    public int level; 
-    public string status; 
+    public string session_id;
+    public GameState game_state;
 }
