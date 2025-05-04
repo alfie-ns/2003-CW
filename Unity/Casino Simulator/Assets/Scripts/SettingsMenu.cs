@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Audio;
 using TMPro;
 
 public class SettingsMenu : MonoBehaviour
@@ -13,18 +14,33 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private float maxSensitivity = 10f;
     [SerializeField] private float defaultSensitivity = 5f;
 
+    [Header("Audio Controls")]
+    [SerializeField] private AudioMixer audioMixer;
+    
+    [SerializeField] private Slider masterVolumeSlider;
+    [SerializeField] private TMP_InputField masterVolumeInputField;
+    
+    [SerializeField] private Slider sfxVolumeSlider;
+    [SerializeField] private TMP_InputField sfxVolumeInputField;
+    
+    [SerializeField] private Slider ambientVolumeSlider;
+    [SerializeField] private TMP_InputField ambientVolumeInputField;
+    
+    [SerializeField] private float minVolume = 0f;
+    [SerializeField] private float maxVolume = 100f;
+
     [Header("Invert Settings")]
     [SerializeField] private Toggle invertYAxisToggle;
 
     [Header("Navigation")]
-    [SerializeField] private bool isFromPauseMenu = false; // Toggle in inspector
+    [SerializeField] private bool isFromPauseMenu = false;
     [SerializeField] private KeyCode backKey = KeyCode.Escape;
     [SerializeField] private Button backButton;
 
     [Header("Auto Save Settings")]
     [SerializeField] private Toggle autoSaveToggle;
     [SerializeField] private TMP_Dropdown autoSaveIntervalDropdown;
-    [SerializeField] private int[] autoSaveIntervalOptions = { 5, 10, 30 }; // Save interval options in minutes
+    [SerializeField] private int[] autoSaveIntervalOptions = { 5, 10, 30 };
 
     [Header("AI Settings")]
     [SerializeField] private Toggle aiPromptsToggle;
@@ -45,6 +61,9 @@ public class SettingsMenu : MonoBehaviour
     private const string SENSITIVITY_KEY = "Sensitivity";
     private const string INVERT_Y_KEY = "InvertY";
     private const string AI_PROMPTS_KEY = "AIPrompts";
+    private const string MASTER_VOLUME_KEY = "MasterVolume";
+    private const string SFX_VOLUME_KEY = "SFXVolume";
+    private const string AMBIENT_VOLUME_KEY = "AmbientVolume";
 
     public bool IsFromPauseMenu 
     { 
@@ -125,6 +144,43 @@ public class SettingsMenu : MonoBehaviour
         {
             settingsSaveConfirmationPanel.SetActive(false);
         }
+
+        // Setup volume sliders and input fields
+        if (masterVolumeSlider != null)
+        {
+            masterVolumeSlider.minValue = minVolume;
+            masterVolumeSlider.maxValue = maxVolume;
+            masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeSliderChanged);
+        }
+        
+        if (masterVolumeInputField != null)
+        {
+            masterVolumeInputField.onEndEdit.AddListener(OnMasterVolumeInputChanged);
+        }
+        
+        if (sfxVolumeSlider != null)
+        {
+            sfxVolumeSlider.minValue = minVolume;
+            sfxVolumeSlider.maxValue = maxVolume;
+            sfxVolumeSlider.onValueChanged.AddListener(OnSFXVolumeSliderChanged);
+        }
+        
+        if (sfxVolumeInputField != null)
+        {
+            sfxVolumeInputField.onEndEdit.AddListener(OnSFXVolumeInputChanged);
+        }
+        
+        if (ambientVolumeSlider != null)
+        {
+            ambientVolumeSlider.minValue = minVolume;
+            ambientVolumeSlider.maxValue = maxVolume;
+            ambientVolumeSlider.onValueChanged.AddListener(OnAmbientVolumeSliderChanged);
+        }
+        
+        if (ambientVolumeInputField != null)
+        {
+            ambientVolumeInputField.onEndEdit.AddListener(OnAmbientVolumeInputChanged);
+        }
     }
 
     private void Start()
@@ -132,6 +188,7 @@ public class SettingsMenu : MonoBehaviour
         LoadSettings();
         LoadAutoSaveSettings();
         LoadAISettings();
+        LoadVolumeSettings();
         
         // Apply the loaded settings to the first person controller
         if (firstPersonLook == null)
@@ -181,6 +238,16 @@ public class SettingsMenu : MonoBehaviour
             
         if (aiPromptsToggle != null)
             PlayerPrefs.SetInt(AI_PROMPTS_KEY, aiPromptsToggle.isOn ? 1 : 0);
+        
+        // Save volume settings
+        if (masterVolumeSlider != null)
+            PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, masterVolumeSlider.value);
+            
+        if (sfxVolumeSlider != null)
+            PlayerPrefs.SetFloat(SFX_VOLUME_KEY, sfxVolumeSlider.value);
+            
+        if (ambientVolumeSlider != null)
+            PlayerPrefs.SetFloat(AMBIENT_VOLUME_KEY, ambientVolumeSlider.value);
         
         PlayerPrefs.Save();
     }
@@ -448,5 +515,213 @@ public class SettingsMenu : MonoBehaviour
             Debug.LogWarning("No menu references found, simply disabling settings panel");
             gameObject.SetActive(false);
         }
+    }
+
+    private void LoadVolumeSettings()
+    {
+        // Load saved volume settings or use defaults (80 = -20dB)
+        float masterVolume = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 80f);
+        float sfxVolume = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 80f);
+        float ambientVolume = PlayerPrefs.GetFloat(AMBIENT_VOLUME_KEY, 80f);
+
+        // Apply loaded values to UI
+        if (masterVolumeSlider != null)
+            masterVolumeSlider.value = masterVolume;
+        
+        if (masterVolumeInputField != null)
+            masterVolumeInputField.text = masterVolume.ToString("F0");
+        
+        if (sfxVolumeSlider != null)
+            sfxVolumeSlider.value = sfxVolume;
+        
+        if (sfxVolumeInputField != null)
+            sfxVolumeInputField.text = sfxVolume.ToString("F0");
+        
+        if (ambientVolumeSlider != null)
+            ambientVolumeSlider.value = ambientVolume;
+        
+        if (ambientVolumeInputField != null)
+            ambientVolumeInputField.text = ambientVolume.ToString("F0");
+            
+        // Apply the loaded settings to the audio mixer
+        ApplyVolumeSettings(masterVolume, sfxVolume, ambientVolume);
+    }
+
+    // Master Volume controls
+    public void OnMasterVolumeSliderChanged(float value)
+    {
+        // Update input field when slider changes
+        if (masterVolumeInputField != null)
+            masterVolumeInputField.text = value.ToString("F0");
+
+        ApplyMasterVolumeSetting(value);
+    }
+
+    public void OnMasterVolumeInputChanged(string inputText)
+    {
+        // Try to parse the input text
+        if (float.TryParse(inputText, out float value))
+        {
+            // Clamp the value within valid range
+            value = Mathf.Clamp(value, minVolume, maxVolume);
+            
+            // Update slider
+            if (masterVolumeSlider != null)
+                masterVolumeSlider.value = value;
+            
+            // Update input field with clamped value if needed
+            if (masterVolumeInputField != null && value.ToString("F0") != inputText)
+                masterVolumeInputField.text = value.ToString("F0");
+
+            ApplyMasterVolumeSetting(value);
+        }
+        else
+        {
+            // Revert to current slider value if parse failed
+            if (masterVolumeInputField != null && masterVolumeSlider != null)
+                masterVolumeInputField.text = masterVolumeSlider.value.ToString("F0");
+        }
+    }
+
+    // SFX Volume controls
+    public void OnSFXVolumeSliderChanged(float value)
+    {
+        // Update input field when slider changes
+        if (sfxVolumeInputField != null)
+            sfxVolumeInputField.text = value.ToString("F0");
+
+        ApplySFXVolumeSetting(value);
+    }
+
+    public void OnSFXVolumeInputChanged(string inputText)
+    {
+        // Try to parse the input text
+        if (float.TryParse(inputText, out float value))
+        {
+            // Clamp the value within valid range
+            value = Mathf.Clamp(value, minVolume, maxVolume);
+            
+            // Update slider
+            if (sfxVolumeSlider != null)
+                sfxVolumeSlider.value = value;
+            
+            // Update input field with clamped value if needed
+            if (sfxVolumeInputField != null && value.ToString("F0") != inputText)
+                sfxVolumeInputField.text = value.ToString("F0");
+
+            ApplySFXVolumeSetting(value);
+        }
+        else
+        {
+            // Revert to current slider value if parse failed
+            if (sfxVolumeInputField != null && sfxVolumeSlider != null)
+                sfxVolumeInputField.text = sfxVolumeSlider.value.ToString("F0");
+        }
+    }
+
+    // Ambient Volume controls
+    public void OnAmbientVolumeSliderChanged(float value)
+    {
+        // Update input field when slider changes
+        if (ambientVolumeInputField != null)
+            ambientVolumeInputField.text = value.ToString("F0");
+
+        ApplyAmbientVolumeSetting(value);
+    }
+
+    public void OnAmbientVolumeInputChanged(string inputText)
+    {
+        // Try to parse the input text
+        if (float.TryParse(inputText, out float value))
+        {
+            // Clamp the value within valid range
+            value = Mathf.Clamp(value, minVolume, maxVolume);
+            
+            // Update slider
+            if (ambientVolumeSlider != null)
+                ambientVolumeSlider.value = value;
+            
+            // Update input field with clamped value if needed
+            if (ambientVolumeInputField != null && value.ToString("F0") != inputText)
+                ambientVolumeInputField.text = value.ToString("F0");
+
+            ApplyAmbientVolumeSetting(value);
+        }
+        else
+        {
+            // Revert to current slider value if parse failed
+            if (ambientVolumeInputField != null && ambientVolumeSlider != null)
+                ambientVolumeInputField.text = ambientVolumeSlider.value.ToString("F0");
+        }
+    }
+
+    private void ApplyMasterVolumeSetting(float volumeValue)
+    {
+        // Convert from 0-100 range to decibels (-80 to 0)
+        float dbValue = ConvertToDecibels(volumeValue);
+        
+        // Apply to mixer
+        if (audioMixer != null)
+        {
+            audioMixer.SetFloat("MasterVolume", dbValue);
+        }
+        
+        // Save the setting
+        PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, volumeValue);
+        PlayerPrefs.Save();
+    }
+
+    private void ApplySFXVolumeSetting(float volumeValue)
+    {
+        // Convert from 0-100 range to decibels (-80 to 0)
+        float dbValue = ConvertToDecibels(volumeValue);
+        
+        // Apply to mixer
+        if (audioMixer != null)
+        {
+            audioMixer.SetFloat("SFXVolume", dbValue);
+        }
+        
+        // Save the setting
+        PlayerPrefs.SetFloat(SFX_VOLUME_KEY, volumeValue);
+        PlayerPrefs.Save();
+    }
+
+    private void ApplyAmbientVolumeSetting(float volumeValue)
+    {
+        // Convert from 0-100 range to decibels (-80 to 0)
+        float dbValue = ConvertToDecibels(volumeValue);
+        
+        // Apply to mixer
+        if (audioMixer != null)
+        {
+            audioMixer.SetFloat("AmbientVolume", dbValue);
+        }
+        
+        // Save the setting
+        PlayerPrefs.SetFloat(AMBIENT_VOLUME_KEY, volumeValue);
+        PlayerPrefs.Save();
+    }
+
+    private void ApplyVolumeSettings(float master, float sfx, float ambient)
+    {
+        // Apply all volume settings at once
+        if (audioMixer != null)
+        {
+            audioMixer.SetFloat("MasterVolume", ConvertToDecibels(master));
+            audioMixer.SetFloat("SFXVolume", ConvertToDecibels(sfx));
+            audioMixer.SetFloat("AmbientVolume", ConvertToDecibels(ambient));
+        }
+    }
+
+    // Utility method to convert slider value (0-100) to decibels (-80 to 0)
+    private float ConvertToDecibels(float sliderValue)
+    {
+        // Use a logarithmic scale for volume
+        if (sliderValue <= 0)
+            return -80f; // Minimum dB value (silence)
+            
+        // Map 0-100 to -80-0
+        return Mathf.Lerp(-80f, 0f, sliderValue / 100f);
     }
 }
