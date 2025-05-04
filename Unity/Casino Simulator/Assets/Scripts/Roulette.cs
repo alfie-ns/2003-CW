@@ -393,7 +393,9 @@ public class Roulette : MonoBehaviour
         bettingOpen = false;
         isSpinning = true;
         resultText.text = "Spinning...";
-        
+
+        // Play spin sound
+        SoundManager.Instance.PlayRouletteSpin();
         // Start spin animation
         Invoke("Spin", spinAnimationTime);
     }

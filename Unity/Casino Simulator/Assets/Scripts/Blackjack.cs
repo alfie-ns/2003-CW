@@ -331,8 +331,7 @@ public class Blackjack : MonoBehaviour
         playerHand.Add(DrawCard());
         dealerHand.Add(DrawCard());
         playerHand.Add(DrawCard());
-        dealerHand.Add(DrawCard());
-    
+        dealerHand.Add(DrawCard());    
         isPlayerTurn = true;
         SetGameButtonsInteractable(true);
         dealButton.interactable = false;
@@ -349,6 +348,8 @@ public class Blackjack : MonoBehaviour
         if (deck.Count == 0) return null;
         Card card = deck[0];
         deck.RemoveAt(0);
+        // Play card shuffle sound
+        SoundManager.Instance.PlayCardShuffle();
         return card;
     }
 
@@ -379,6 +380,7 @@ public class Blackjack : MonoBehaviour
         while (GetHandValue(dealerHand) < 17)
         {
             dealerHand.Add(DrawCard());
+            SoundManager.Instance.PlayCardShuffle();
         }
 
         DetermineWinner();

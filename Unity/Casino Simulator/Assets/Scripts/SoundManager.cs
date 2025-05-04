@@ -8,7 +8,9 @@ public class SoundManager : MonoBehaviour
     public AudioClip winSound;
     public AudioClip loseSound;
     public AudioClip buttonClick;
-
+    public AudioClip cardShuffle;
+    public AudioClip slotMachineSpin;
+    public AudioClip roulletteSpin;
     private void Awake()
     {
         // Singleton pattern
@@ -33,4 +35,7 @@ public class SoundManager : MonoBehaviour
     public void PlayWinSound() => PlaySFX(winSound);
     public void PlayLoseSound() => PlaySFX(loseSound);
     public void PlayButtonClick() => PlaySFX(buttonClick);
+    public void PlayCardShuffle() => PlaySFX(cardShuffle);
+    public void PlaySlotMachineSpin() => PlaySFX(slotMachineSpin);
+    public void PlayRouletteSpin() => PlaySFX(roulletteSpin);
 }

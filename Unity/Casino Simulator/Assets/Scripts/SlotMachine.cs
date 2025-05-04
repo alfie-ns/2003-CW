@@ -467,6 +467,8 @@ public class SlotMachine : MonoBehaviour
         UpdateBalanceDisplay();
 
         isSpinning = true;
+        // Play spin sound
+        SoundManager.Instance.PlaySlotMachineSpin();
         stopTimes = new float[rollers.Length];
         for (int i = 0; i < rollers.Length; i++)
         {
