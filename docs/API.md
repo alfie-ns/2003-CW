@@ -55,7 +55,6 @@ With the session ID, the AIResponseView can retrieve the session object and use 
 
 ```python
 def post(self, request, pk=None):
-        print(f"OpenAI API Key: {openai.api_key}")
         session = self.get_object(pk)
 
     prompt = request.data.get("prompt")
@@ -66,19 +65,17 @@ def post(self, request, pk=None):
             response = openai.chat.completions.create(
                 model="gpt-4.1-mini",
                 messages=[
-                    {"role": "system", "content": "You are assisting with a Casino Simulator game simulation."},
                     {"role": "user", "content": system_message},
                     {"role": "user", "content": prompt}
                 ]
             )
-            ai_response = response.choices[0].message.content
+            response = response.choices[0].message.content
         except Exception as e:
             return Response({"error": f"OpenAI API error: {str(e)}"}, status=500)
 
     return Response({
-            "response": ai_response,
+            "response": response,
             "session_id": session.session_id,
-            "game_state": session.game_state
         })
 
 ```

@@ -1,7 +1,10 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
-from .models import GameSession
+from rest_framework import status
+from .models import GameSession, AIResponse
+from .serializers import GameSessionSerializer, AIResponseSerializer
+from uuid import UUID
 from decouple import config
 import openai
 
@@ -31,13 +34,30 @@ class AIResponseView(APIView):
             raise NotFound("GameSession not found")
 
     def post(self, request, pk=None):
+        print("Request received with pk:", pk)
+        print("Request data:", request.data)
+
         # Retrieve the session object
-        session = self.get_object(pk)
+        try:
+            session = GameSession.objects.get(pk=pk)
+        except GameSession.DoesNotExist:
+            session = GameSession.objects.create(session_id=pk, game_state=request.data.get("game_state", {}))
 
         # Extract the prompt from the request
         prompt = request.data.get("prompt")
         if not prompt:
-            return Response({"error": "Prompt is required"}, status=400)
+            return Response({"error": "Prompt is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get the game state and extract player balance
+        game_state = request.data.get("game_state", {})
+        player_balance = game_state.get("score", 0)  # Extract balance from score field; 0 if empty
+    
+        if game_state:
+            session.game_state = game_state
+            session.save()
+
+        # Enhance the prompt with player balance info
+        final_prompt = f"Player's current balance: ${player_balance}. {prompt}"
 
         # Call OpenAI API to generate the response
         try:
@@ -45,16 +65,38 @@ class AIResponseView(APIView):
                 model="gpt-4.1-mini", 
                 messages=[
                     {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": final_prompt}
                 ]
             )
-            ai_response = response.choices[0].message.content  # Extract text from OpenAI response
+            response_text = response.choices[0].message.content  # Extract text from OpenAI response
         except Exception as e:
-            return Response({"error": f"OpenAI API error: {str(e)}"}, status=500)
+            return Response({"error": f"OpenAI API error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Return the AI response
-        return Response({
-            "response": ai_response,
+        # Create and save the AIResponse object
+        response = AIResponse(
+            session=session,
+            prompt=prompt,
+            response=response_text
+        )
+        response.save() # save to database
+        
+        # Serialise the response
+        response_serialiser = AIResponseSerializer(response)
+        session_serialiser = GameSessionSerializer(session)
+
+        print("Final response data:", {
+            "response": response_text[:50] + "...",  # Print first 50 chars
             "session_id": session.session_id,
-            "game_state": session.game_state
+            "response_data_keys": response_serialiser.data.keys(),
+            "session_data_keys": session_serialiser.data.keys() if session_serialiser.data else "None",
         })
+        
+        # Return the serialised data
+        return Response({
+            "message": response_text,
+            "metadata": {
+                "session_id": session.session_id,
+                "timestamp": response.timestamp,
+                "game_state": session.game_state
+            }
+        }, status=status.HTTP_201_CREATED)
