@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using System;
+
 
 /// <summary>
 /// Handles API interactions with the Django backend to communicate with OpenAI.
@@ -122,9 +124,13 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">The prompt to send in the request body.</param>
     private IEnumerator PostRequest(string endpoint, string prompt)
     {
-        int currentBalance;
+        int currentBalance = 0;
         if (balanceManager != null) {
             currentBalance = balanceManager.GetBalance();
+            Debug.Log($"[API] Current player balance: ${currentBalance}");
+        } else 
+        {
+            Debug.LogWarning("[API] Balance manager is null, using default balance: 0");
         }
 
         string fullUrl = BASE_URL + endpoint;
@@ -158,19 +164,22 @@ public class ApiManager : MonoBehaviour
             }
             else // if the request fails
             {
-                Debug.LogError("Error: " + request.error); 
+                //Debug.LogError("Error: " + request.error); 
                 // Create a fallback response object to protect the game from breaking during API failure
                 // This ensures the game gracefully degrades instead of crashing
                 ApiResponse fallback = new ApiResponse
                 {
-                    response = "AI is currently unavailable. Please try again shortly.",
-                    session_id = sessionId,
-                    game_state = new GameState 
-                    { 
-                        player_name = "FallbackPlayer",  // dummy data
-                        score = 0, 
-                        level = 1, 
-                        status = "fallback" // dummy data
+                    message = "AI is currently unavailable. Please try again shortly.",
+                    metadata = new ApiMetadata
+                    {
+                        session_id = sessionId,
+                        game_state = new GameState 
+                        { 
+                            player_name = "FallbackPlayer",  // dummy data
+                            score = 0, 
+                            level = 1, 
+                            status = "fallback" // dummy data
+                        }
                     }
                 };
 
@@ -186,19 +195,21 @@ public class ApiManager : MonoBehaviour
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
+        Debug.Log($"[API] Received response: {jsonResponse}");
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
 
         // Store the last response
-        lastAIResponse = response.response;
+        lastAIResponse = response.message;  
 
         // Update UI if assigned
         if (aiResponseText != null)
         {
-            aiResponseText.text = response.response;
+            aiResponseText.text = response.message; 
         }
 
         // Notify any registered callbacks
-        responseCallback?.Invoke(response.response);
+        responseCallback?.Invoke(response.message); 
+        
     }
 
     public void SetPromptsEnabled(bool enabled)
@@ -250,9 +261,16 @@ public class ApiRequest
 [System.Serializable]
 public class ApiResponse
 {
-    public string response;
-    public string session_id; 
-    public GameState game_state; 
+    public string message;
+    public ApiMetadata metadata;
+}
+
+[System.Serializable]
+public class ApiMetadata
+{
+    public string session_id;
+    public string timestamp;
+    public GameState game_state;
 }
 
 /// Represents the game state structure returned in the API response.

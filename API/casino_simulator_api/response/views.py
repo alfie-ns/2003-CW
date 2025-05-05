@@ -4,6 +4,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework import status
 from .models import GameSession, AIResponse
 from .serializers import GameSessionSerializer, AIResponseSerializer
+from uuid import UUID
 from decouple import config
 import openai
 
@@ -37,16 +38,26 @@ class AIResponseView(APIView):
         print("Request data:", request.data)
 
         # Retrieve the session object
-        session = self.get_object(pk)
+        try:
+            session = GameSession.objects.get(pk=pk)
+        except GameSession.DoesNotExist:
+            session = GameSession.objects.create(session_id=pk, game_state=request.data.get("game_state", {}))
 
         # Extract the prompt from the request
         prompt = request.data.get("prompt")
         if not prompt:
             return Response({"error": "Prompt is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        if request.data.get("game_state"):
-            session.game_state = request.data.get("game_state")
+        # Get the game state and extract player balance
+        game_state = request.data.get("game_state", {})
+        player_balance = game_state.get("score", 0)  # Extract balance from score field; 0 if empty
+    
+        if game_state:
+            session.game_state = game_state
             session.save()
+
+        # Enhance the prompt with player balance info
+        final_prompt = f"Player's current balance: ${player_balance}. {prompt}"
 
         # Call OpenAI API to generate the response
         try:
@@ -54,7 +65,7 @@ class AIResponseView(APIView):
                 model="gpt-4.1-mini", 
                 messages=[
                     {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": final_prompt}
                 ]
             )
             response_text = response.choices[0].message.content  # Extract text from OpenAI response
@@ -67,7 +78,7 @@ class AIResponseView(APIView):
             prompt=prompt,
             response=response_text
         )
-        response.save()
+        response.save() # save to database
         
         # Serialise the response
         response_serialiser = AIResponseSerializer(response)
