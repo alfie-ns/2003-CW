@@ -247,6 +247,15 @@ public class ApiManager : MonoBehaviour
     {
         return shouldShowPrompts;
     }
+
+    public void ResetSessionId()
+    {
+        // Generate a new session ID for the new game
+        sessionId = Guid.NewGuid().ToString();
+        PlayerPrefs.SetString(SESSION_KEY, sessionId);
+        PlayerPrefs.Save();
+        Debug.Log("Created new session ID: " + sessionId);
+    }
 }
 
 /// Represents the structure of the API request body.

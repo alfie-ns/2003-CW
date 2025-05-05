@@ -275,6 +275,10 @@ public class SaveSystem : MonoBehaviour
             // Delete the save file
             File.Delete(saveFilePath);
         }
+
+        // Clear the session ID from PlayerPrefs
+        PlayerPrefs.DeleteKey("SessionID");
+        PlayerPrefs.Save();
     }
 
     // These methods can be accessed from any scene
