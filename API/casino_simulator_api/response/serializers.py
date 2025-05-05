@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import GameSession, AIResponse
+from zoneinfo import ZoneInfo
+
 
 '''
     This file searialises the data for the API request;
@@ -26,6 +28,12 @@ class GameSessionSerializer(serializers.ModelSerializer):
         fields = ['session_id', 'created_at', 'game_state']
 
 class AIResponseSerializer(serializers.ModelSerializer):
+    # Force British timezone
+    timestamp = serializers.DateTimeField(
+        format='%Y-%m-%dT%H:%M:%S%z',
+        default_timezone=ZoneInfo('Europe/London'),
+    )
+    print(timestamp)
     class Meta:
         model = AIResponse
         fields = ['session', 'prompt', 'response', 'timestamp']

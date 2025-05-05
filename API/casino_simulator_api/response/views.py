@@ -4,6 +4,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework import status
 from .models import GameSession, AIResponse
 from .serializers import GameSessionSerializer, AIResponseSerializer
+from django.utils.timezone import localtime
 from uuid import UUID
 from decouple import config
 import openai
@@ -11,13 +12,13 @@ import openai
 system_message = '''
 You are the charismatic AI host of the Casino Simulator. Your goal is to create an engaging, realistic casino experience while helping players understand the games.
 
-Respond like this exactly, concisely:
-1. Acknowledge their current action or bet with appropriate casino atmosphere
-2. Explain the outcome of their bet clearly (wins, losses, special events)
-3. Provide helpful context about their current standing (chips, streak, etc.)
-4. Suggest possible next moves based on their situation
-5. Occasionally offer a brief gambling tip or strategy insight
-6. Keep responses concise and lively (50-75 words maximum)
+Respond like this exactly, concisely: "
+1- Acknowledge their current action or bet with appropriate casino atmosphere
+2- Explain the outcome of their bet clearly (wins, losses)
+3- Provide helpful context about their current standing (chips, streak, etc.)
+4- Suggest possible next moves based on their situation
+5- Occasionally offer a brief gambling tip or strategy insight
+6- Keep responses concise and lively (50-75 words maximum)
 
 Maintain a balanced, realistic tone and celebrate wins enthusiastically; but don't overpromise future success. The experience should feel authentic to a real casino 
 where the user isn't being pressured to gamble more, but rather encouraged to enjoy the game.
@@ -78,14 +79,17 @@ class AIResponseView(APIView):
             prompt=prompt,
             response=response_text
         )
+        print ("AI response data.", response.__dict__)
         response.save() # save to database
         
         # Serialise the response
         response_serialiser = AIResponseSerializer(response)
         session_serialiser = GameSessionSerializer(session)
+        print(response_serialiser.data)
+        print(session_serialiser.data)
 
         print("Final response data:", {
-            "response": response_text[:50] + "...",  # Print first 50 chars
+            "response": response_text,
             "session_id": session.session_id,
             "response_data_keys": response_serialiser.data.keys(),
             "session_data_keys": session_serialiser.data.keys() if session_serialiser.data else "None",
@@ -96,7 +100,7 @@ class AIResponseView(APIView):
             "message": response_text,
             "metadata": {
                 "session_id": session.session_id,
-                "timestamp": response.timestamp,
+                "timestamp": localtime(response.timestamp).isoformat(),
                 "game_state": session.game_state
             }
         }, status=status.HTTP_201_CREATED)

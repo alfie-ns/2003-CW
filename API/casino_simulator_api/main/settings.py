@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-4a_$qpant-f0!qs@6u6f$u2fg%vt-=q0u88m$(+6$w7rm5gczd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['two003-cw.onrender.com', '127.0.0.1', 'localhost'] # add render url only for security
+ALLOWED_HOSTS = ['two003-cw.onrender.com', '127.0.0.1'] # add render url and added localhost back because testing
 
 # Application definition
 
@@ -74,6 +74,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'main.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',    # include offset
+    'DEFAULT_TIMEZONE': 'Europe/London',         # serialise using London time
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -110,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/London'
 
 USE_I18N = True
 
