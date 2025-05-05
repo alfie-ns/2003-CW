@@ -37,6 +37,11 @@ public class PlayerBalanceManager : MonoBehaviour, IBalanceManager
         }
     }
     
+    public void SetBalance(int amount)
+    {
+    currentBalance = amount;
+    UpdateBalanceText(); // Update the display after setting the balance
+    }
     public int GetBalance()
     {
         return currentBalance;

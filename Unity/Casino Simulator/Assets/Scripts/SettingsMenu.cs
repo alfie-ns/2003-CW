@@ -34,6 +34,9 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private Button saveAndExitButton;
     [SerializeField] private Button exitWithoutSavingButton;
 
+    [Header("Sound Settings")]
+    [SerializeField] private Toggle soundMuteToggle;
+
     // References to menus
     private MainMenu mainMenu;
     private PauseMenu pauseMenu;
@@ -45,6 +48,7 @@ public class SettingsMenu : MonoBehaviour
     private const string SENSITIVITY_KEY = "Sensitivity";
     private const string INVERT_Y_KEY = "InvertY";
     private const string AI_PROMPTS_KEY = "AIPrompts";
+    private const string SOUND_MUTE_KEY = "SoundMute";
 
     public bool IsFromPauseMenu 
     { 
@@ -109,6 +113,11 @@ public class SettingsMenu : MonoBehaviour
             aiPromptsToggle.onValueChanged.AddListener(OnAIPromptsToggleChanged);
         }
         
+        if (soundMuteToggle != null)
+        {
+            soundMuteToggle.onValueChanged.AddListener(OnSoundMuteToggleChanged);
+        }
+
         // Setup the confirmation panel buttons
         if (saveAndExitButton != null)
         {
@@ -132,15 +141,14 @@ public class SettingsMenu : MonoBehaviour
         LoadSettings();
         LoadAutoSaveSettings();
         LoadAISettings();
-        
+        LoadSoundSettings(); 
+
         // Apply the loaded settings to the first person controller
         if (firstPersonLook == null)
         {
-            // Try finding again in case it wasn't available during Awake
             firstPersonLook = FindObjectOfType<FirstPersonLook>();
         }
-        
-        // Apply initial settings to player camera
+
         ApplySettingsToPlayer();
     }
     
@@ -162,12 +170,16 @@ public class SettingsMenu : MonoBehaviour
         // Apply loaded values to UI
         if (sensitivitySlider != null)
             sensitivitySlider.value = sensitivity;
-        
+
         if (sensitivityInputField != null)
             sensitivityInputField.text = sensitivity.ToString("F1");
-        
+
         if (invertYAxisToggle != null)
             invertYAxisToggle.isOn = invertY;
+
+
+
+ ;
     }
 
     private void SaveSettings()
@@ -361,6 +373,34 @@ public class SettingsMenu : MonoBehaviour
         {
             saveSystem.SetAutoSaveInterval(intervalMinutes);
         }
+    }
+
+    private void LoadSoundSettings()
+    {
+        // Load sound mute state (default to unmuted)
+        bool isMuted = PlayerPrefs.GetInt(SOUND_MUTE_KEY, 0) == 1;
+
+        // Apply loaded value to UI toggle
+        if (soundMuteToggle != null)
+            soundMuteToggle.isOn = isMuted;
+
+        // Apply mute state to audio
+        ApplySoundMuteSetting(isMuted);
+    }
+
+    public void OnSoundMuteToggleChanged(bool isMuted)
+    {
+        ApplySoundMuteSetting(isMuted);
+
+        // Save the setting
+        PlayerPrefs.SetInt(SOUND_MUTE_KEY, isMuted ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    private void ApplySoundMuteSetting(bool isMuted)
+    {
+        // Mute or unmute all audio in the game
+        AudioListener.volume = isMuted ? 0f : 1f;
     }
 
     public void ShowSaveConfirmation()

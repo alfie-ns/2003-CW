@@ -247,7 +247,7 @@ public class SaveSystem : MonoBehaviour
             playerTransform.rotation = Quaternion.Euler(0, saveData.rotationY, 0);
             
             // Apply saved stats
-            playerBalanceManager.AddMoney(saveData.playerBalance - playerBalanceManager.GetBalance());
+            playerBalanceManager.SetBalance(saveData.playerBalance);
             
             // Apply saved settings
             this.autoSaveEnabled = saveData.autoSaveEnabled;
