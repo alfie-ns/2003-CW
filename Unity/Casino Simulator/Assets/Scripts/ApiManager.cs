@@ -160,7 +160,7 @@ public class ApiManager : MonoBehaviour
             }
             else // if the request fails
             {
-                Debug.LogError("Error: " + request.error); 
+                //Debug.LogError("Error: " + request.error); 
                 // Create a fallback response object to protect the game from breaking during API failure
                 // This ensures the game gracefully degrades instead of crashing
                 ApiResponse fallback = new ApiResponse
