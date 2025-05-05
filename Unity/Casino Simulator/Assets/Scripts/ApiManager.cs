@@ -127,6 +127,10 @@ public class ApiManager : MonoBehaviour
         int currentBalance = 0;
         if (balanceManager != null) {
             currentBalance = balanceManager.GetBalance();
+            Debug.Log($"[API] Current player balance: ${currentBalance}");
+        } else 
+        {
+            Debug.LogWarning("[API] Balance manager is null, using default balance: 0");
         }
 
         string fullUrl = BASE_URL + endpoint;
@@ -191,6 +195,7 @@ public class ApiManager : MonoBehaviour
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
+        Debug.Log($"[API] Received response: {jsonResponse}");
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
 
         // Store the last response
