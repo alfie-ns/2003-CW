@@ -435,6 +435,7 @@ public class Blackjack : MonoBehaviour
                     // After determining the winner and setting resultText
                     string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
                                     $"The result was: {resultText.text}. " +
+                                    $"The player's current balance of ${balanceManager.GetBalance()} already includes these new winnings. " +
                                     $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
 
                     // Send to AI
@@ -456,6 +457,7 @@ public class Blackjack : MonoBehaviour
                     // After determining the winner and setting resultText
                     string prompt = $"In Blackjack, player had {playerValue}, dealer had {dealerValue}. " +
                                     $"The result was: {resultText.text}. " +
+                                    $"The player's current balance of ${balanceManager.GetBalance()} already includes these losses. " +
                                     $"Give a brief casino dealer comment about this outcome; suggest a strategy for the player.";
 
                     // Send to AI

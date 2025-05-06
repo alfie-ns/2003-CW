@@ -20,7 +20,7 @@ The player interacts with any game; Roulette, Blackjack, or Slot Machines.
 ## Development Focus
 
 - Morgan McGovern & Harrison Buck: Focus on the main game development and mechanics.
-- Alfie Nurse: Focus on the Django API and OpenAI integration.
+- Alfie Nurse: Focus on the Django API and secure OpenAI integration, configuration of ApiManager and other game scripts to work with the API.
 
 ## Development Notes
 

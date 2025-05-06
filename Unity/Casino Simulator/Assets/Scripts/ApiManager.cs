@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using System;
+
 
 /// <summary>
 /// Handles API interactions with the Django backend to communicate with OpenAI.
@@ -10,8 +12,10 @@ using TMPro;
 public class ApiManager : MonoBehaviour
 {
     private const string BASE_URL = "https://two003-cw.onrender.com"; // base URL of deployed Django backend on Render (free-tier hosting)
-    private const string SESSION_ID = "c4912571-06da-48e4-8495-62ddf69921f0"; 
+    private string sessionId; // Dynamic session ID
+    private const string SESSION_KEY = "SessionID";
     private const string AI_PROMPTS_KEY = "AIPrompts"; // Same key used in SettingsMenu
+    [SerializeField] private PlayerBalanceManager balanceManager; // Reference to PlayerBalanceManager to get user balance for API requests
 
     [SerializeField] private TMPro.TextMeshProUGUI aiResponseText; // UI element to display the AI response; now TextMeshProUGUI opposed to a simple Text component
     [SerializeField] private Button sendRequestButton; 
@@ -33,6 +37,20 @@ public class ApiManager : MonoBehaviour
         {
             Destroy(gameObject);
             return;
+        }
+
+        if (PlayerPrefs.HasKey(SESSION_KEY))
+        {
+            sessionId = PlayerPrefs.GetString(SESSION_KEY);
+            Debug.Log("Using existing session: " + sessionId);
+        }
+        else
+        {
+            // Create new session ID (UUID/GUID format)
+            sessionId = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(SESSION_KEY, sessionId);
+            PlayerPrefs.Save();
+            Debug.Log("Created new session: " + sessionId);
         }
         
         // Initialise shouldShowPrompts from PlayerPrefs (default to true if not set)
@@ -91,7 +109,7 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">The prompt to send to the AI API.</param>
     private void OnSendRequestClicked(string prompt)
     {
-        StartCoroutine(PostRequest("/api/sessions/" + SESSION_ID + "/response/", prompt)); // post the request
+        StartCoroutine(PostRequest("/api/sessions/" + sessionId + "/response/", prompt)); // post the request
     }
 
     /// Public method to allow other scripts to send AI prompts
@@ -106,8 +124,31 @@ public class ApiManager : MonoBehaviour
     /// <param name="prompt">The prompt to send in the request body.</param>
     private IEnumerator PostRequest(string endpoint, string prompt)
     {
-        string fullUrl = BASE_URL + endpoint; // construct the full url
-        string jsonBody = JsonUtility.ToJson(new ApiRequest { prompt = prompt });
+        int currentBalance = 0;
+        if (balanceManager != null) {
+            currentBalance = balanceManager.GetBalance();
+            Debug.Log($"[API] Current player balance: ${currentBalance}");
+        } else 
+        {
+            Debug.LogWarning("[API] Balance manager is null, using default balance: 0");
+        }
+
+        string fullUrl = BASE_URL + endpoint;
+        
+        // Create a full request with the current game state
+        var apiRequest = new ApiRequest 
+        { 
+            prompt = prompt,
+            game_state = new GameState 
+            { 
+                player_name = "Player", 
+                score = currentBalance,  // Use the current balance from PlayerBalanceManager
+                level = 1,
+                status = "playing"
+            }
+        };
+        
+        string jsonBody = JsonUtility.ToJson(apiRequest);
         using (UnityWebRequest request = new UnityWebRequest(fullUrl, "POST")) // prevent memory leaks  
         {
             byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonBody); 
@@ -123,19 +164,22 @@ public class ApiManager : MonoBehaviour
             }
             else // if the request fails
             {
-                Debug.LogError("Error: " + request.error); 
+                //Debug.LogError("Error: " + request.error); 
                 // Create a fallback response object to protect the game from breaking during API failure
                 // This ensures the game gracefully degrades instead of crashing
                 ApiResponse fallback = new ApiResponse
                 {
-                    response = "AI is currently unavailable. Please try again shortly.",
-                    session_id = SESSION_ID,
-                    game_state = new GameState 
-                    { 
-                        player_name = "FallbackPlayer",  // dummy data
-                        score = 0, 
-                        level = 1, 
-                        status = "fallback" // dummy data
+                    message = "AI is currently unavailable. Please try again shortly.",
+                    metadata = new ApiMetadata
+                    {
+                        session_id = sessionId,
+                        game_state = new GameState 
+                        { 
+                            player_name = "FallbackPlayer",  // dummy data
+                            score = 0, 
+                            level = 1, 
+                            status = "fallback" // dummy data
+                        }
                     }
                 };
 
@@ -151,19 +195,21 @@ public class ApiManager : MonoBehaviour
     /// <param name="jsonResponse">the json response string from the API.</param>
     private void HandleApiResponse(string jsonResponse)
     {
+        Debug.Log($"[API] Received response: {jsonResponse}");
         ApiResponse response = JsonUtility.FromJson<ApiResponse>(jsonResponse);
 
         // Store the last response
-        lastAIResponse = response.response;
+        lastAIResponse = response.message;  
 
         // Update UI if assigned
         if (aiResponseText != null)
         {
-            aiResponseText.text = response.response;
+            aiResponseText.text = response.message; 
         }
 
         // Notify any registered callbacks
-        responseCallback?.Invoke(response.response);
+        responseCallback?.Invoke(response.message); 
+        
     }
 
     public void SetPromptsEnabled(bool enabled)
@@ -201,6 +247,15 @@ public class ApiManager : MonoBehaviour
     {
         return shouldShowPrompts;
     }
+
+    public void ResetSessionId()
+    {
+        // Generate a new session ID for the new game
+        sessionId = Guid.NewGuid().ToString();
+        PlayerPrefs.SetString(SESSION_KEY, sessionId);
+        PlayerPrefs.Save();
+        Debug.Log("Created new session ID: " + sessionId);
+    }
 }
 
 /// Represents the structure of the API request body.
@@ -208,15 +263,23 @@ public class ApiManager : MonoBehaviour
 public class ApiRequest
 {
     public string prompt; // the prompt sent to the AI API
+    public GameState game_state; // the current game state
 }
 
 /// Represents the structure of the API response.
 [System.Serializable]
 public class ApiResponse
 {
-    public string response;
-    public string session_id; 
-    public GameState game_state; 
+    public string message;
+    public ApiMetadata metadata;
+}
+
+[System.Serializable]
+public class ApiMetadata
+{
+    public string session_id;
+    public string timestamp;
+    public GameState game_state;
 }
 
 /// Represents the game state structure returned in the API response.

@@ -80,7 +80,12 @@ public class MainMenu : MonoBehaviour
         {
             saveSystem.ResetSave();
         }
-        
+
+        if (ApiManager.Instance != null)
+        {
+            ApiManager.Instance.ResetSessionId(); // create new game session
+        }
+
         // Load the casino scene
         SceneManager.LoadScene(casinoSceneName);
     }

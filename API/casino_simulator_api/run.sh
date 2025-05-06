@@ -29,7 +29,6 @@ run_server() {
 
 # Function to migrate before running the server
 migrate() {
-    cd casino_simulator_api
     bash ../scripts/migrate.sh
 }
 

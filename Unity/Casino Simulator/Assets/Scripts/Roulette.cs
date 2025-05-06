@@ -504,6 +504,7 @@ public class Roulette : MonoBehaviour
             string prompt = $"Roulette wheel landed on {result} ({resultColor}). " +
                             $"Player's bets were: {betsDescription} " +
                             $"Total winnings: ${totalWinAmount}. " +
+                            $"The new total balance for the player is {balanceManager.GetBalance()}. " +
                             $"Give a brief croupier comment about this roulette spin.";
 
             // Send to AI
