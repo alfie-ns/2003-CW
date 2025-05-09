@@ -57,6 +57,7 @@ public class ApiManager : MonoBehaviour
         shouldShowPrompts = PlayerPrefs.GetInt(AI_PROMPTS_KEY, 1) == 1;
     }
 
+    /// Start is called before the first frame update.
     private void Start()
     {
         // Find the AIResponseText component at runtime
@@ -119,7 +120,7 @@ public class ApiManager : MonoBehaviour
         OnSendRequestClicked(prompt);
     }
 
-    /// Sends a post request to the Django API.
+    /// Sends a POST request to the Django API.
     /// <param name="endpoint">The API endpoint to call.</param>
     /// <param name="prompt">The prompt to send in the request body.</param>
     private IEnumerator PostRequest(string endpoint, string prompt)
@@ -178,7 +179,7 @@ public class ApiManager : MonoBehaviour
                             player_name = "FallbackPlayer",  // dummy data
                             score = 0, 
                             level = 1, 
-                            status = "fallback" // dummy data
+                            status = "fallback" 
                         }
                     }
                 };
@@ -212,6 +213,7 @@ public class ApiManager : MonoBehaviour
         
     }
 
+    // This method is called to enable or disable AI prompts in the UI.
     public void SetPromptsEnabled(bool enabled)
     {
         // Store the setting in local variable

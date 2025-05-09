@@ -1,7 +1,6 @@
 # TO-DO
 
 - [X] refine report that was initially submitted
-- [ ] the ai will be used for the decision making of the AI
 
 ### Morgan
 

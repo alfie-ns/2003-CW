@@ -1,6 +1,5 @@
 from django.contrib import admin
-from django.urls import path
-from response.views import AIResponseView
+from django.urls import path, include
 from django.http import JsonResponse
 
 def health_check(request):
@@ -8,6 +7,6 @@ def health_check(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),  # Django admin interface
-    path('api/sessions/<uuid:pk>/response/', AIResponseView.as_view(), name='ai-response'),  # AI response endpoint
+    path('api/', include('response.urls')), # AI response endpoint; use response/urls.py
     path('', health_check), # Health check endpoint for Render confirmation
 ]

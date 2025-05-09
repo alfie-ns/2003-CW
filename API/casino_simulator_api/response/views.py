@@ -3,9 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
 from rest_framework import status
 from .models import GameSession, AIResponse
-from .serializers import GameSessionSerializer, AIResponseSerializer
-from django.utils.timezone import localtime
-from uuid import UUID
+from .serialisers import GameSessionSerialiser, AIResponseSerialiser
 from decouple import config
 import openai
 
@@ -24,40 +22,47 @@ Maintain a balanced, realistic tone and celebrate wins enthusiastically; but don
 where the user isn't being pressured to gamble more, but rather encouraged to enjoy the game.
 '''
 
-# Extract OpenAI key; ensure it's set in the environment variables file
+# Extract OpenAI key; ensure it's set in the environment variables
 openai.api_key = config("OPENAI_API_KEY")
 
 class AIResponseView(APIView):
-    def get_object(self, pk):
-        try:
-            return GameSession.objects.get(pk=pk)
-        except GameSession.DoesNotExist:
-            raise NotFound("GameSession not found")
+
+    """
+    docs/API.md for full API documentation.
+
+    GET    – retrieve a session’s details.
+    POST   – process a prompt via OpenAI and update game state.
+    PUT    – update the game state of an existing session.
+    DELETE – remove a session (and its AIResponses) from the database.
+    """ 
+  
+    def get(self, request, pk=None):
+        session = self.get_object(pk)  # fetch the session object
+        serialiser = GameSessionSerialiser(session) # serialise the session object
+        return Response(serialiser.data) # return the serialised data i.e. session_id, created_at, and game_state
 
     def post(self, request, pk=None):
-        print("Request received with pk:", pk)
-        print("Request data:", request.data)
-
         # Retrieve the session object
         try:
             session = GameSession.objects.get(pk=pk)
         except GameSession.DoesNotExist:
-            session = GameSession.objects.create(session_id=pk, game_state=request.data.get("game_state", {}))
-
+            # still proceed with a normal request; store the session ID in the sqlite database 
+            session = GameSession.objects.create(session_id=pk, game_state=request.data.get("game_state", {})) 
+            
         # Extract the prompt from the request
         prompt = request.data.get("prompt")
         if not prompt:
-            return Response({"error": "Prompt is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Prompt is required"}, status=status.HTTP_400_BAD_REQUEST) # if Unity doesn't send a prompt, respond with clear error message
         
-        # Get the game state and extract player balance
+        # Extract the game_state and player_balance from the Unity -> Django request
         game_state = request.data.get("game_state", {})
-        player_balance = game_state.get("score", 0)  # Extract balance from score field; 0 if empty
+        player_balance = game_state.get("score", 0)  # fetch score from game_state
     
-        if game_state:
+        if game_state: # if game state is provided, synchronise it, save to database
             session.game_state = game_state
             session.save()
 
-        # Enhance the prompt with player balance info
+        # Enhance the prompt's context with constructed player balance info
         final_prompt = f"Player's current balance: ${player_balance}. {prompt}"
 
         # Call OpenAI API to generate the response
@@ -79,28 +84,61 @@ class AIResponseView(APIView):
             prompt=prompt,
             response=response_text
         )
-        print ("AI response data.", response.__dict__)
         response.save() # save to database
         
         # Serialise the response
-        response_serialiser = AIResponseSerializer(response)
-        session_serialiser = GameSessionSerializer(session)
-        print(response_serialiser.data)
-        print(session_serialiser.data)
+        response_serialiser = AIResponseSerialiser(response).data
+        session_serialiser = GameSessionSerialiser(session).data
+        print(f"Response Serialiser:\n {response_serialiser}\n")
+        print(f"Session Serialiser:\n {session_serialiser}")
 
-        print("Final response data:", {
-            "response": response_text,
-            "session_id": session.session_id,
-            "response_data_keys": response_serialiser.data.keys(),
-            "session_data_keys": session_serialiser.data.keys() if session_serialiser.data else "None",
-        })
-        
+
+
         # Return the serialised data
         return Response({
-            "message": response_text,
+            "message": response_serialiser['response'],  # get 'response' text from serialised AIResponse data
             "metadata": {
-                "session_id": session.session_id,
-                "timestamp": localtime(response.timestamp).isoformat(),
-                "game_state": session.game_state
+                "session_id": session_serialiser['session_id'],    
+                "timestamp": response_serialiser['timestamp'], 
+                "game_state": session_serialiser['game_state'], 
             }
         }, status=status.HTTP_201_CREATED)
+    
+    def put(self, request, pk=None):
+        # Update the game state of an existing session
+        try:
+            session = GameSession.objects.get(pk=pk)
+        except GameSession.DoesNotExist:
+            raise NotFound("GameSession not found")
+
+        game_state = request.data.get("game_state")
+        if game_state is None:
+            return Response(
+                {"error": "game_state field is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        session.game_state = game_state
+        session.save()
+
+        serialised = GameSessionSerialiser(session).data
+        return Response(serialised, status=status.HTTP_200_OK)
+    
+    def delete(self, request, pk=None):
+        # Delete a session and cascade to AIResponses
+        try:
+            session = GameSession.objects.get(pk=pk)
+        except GameSession.DoesNotExist:
+            raise NotFound("GameSession not found")
+
+        session.delete()  # cascades to AIResponse via FK
+        return Response({"message": "Session deleted"}, status=status.HTTP_200_OK)
+    
+    # ---
+
+    # Helper functions:
+    def get_object(self, pk):
+        try:
+            return GameSession.objects.get(pk=pk)
+        except GameSession.DoesNotExist:
+            raise NotFound("GameSession not found")
