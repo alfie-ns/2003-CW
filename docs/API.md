@@ -61,10 +61,10 @@ This urlpattern exposes `/api/sessions/<uuid:pk>/response/` and responds back to
 
 `casino_simulator_api/response/views.py`
 
-1- `GET` request to fetch the `GameSession` object; calls the `get()` method
-2- `POST` request to return a response from OpenAI back to Unity; calls the `post()` method
-3- `PUT` request to update the `GameSession` object; calls the `put()` method
-4- `DELETE` request to remove a `GameSession` object, cascading to the `AIResponse` object; calls the `delete()` method
+1. `GET` request to fetch the `GameSession` object; calls the `get()` method
+2. `POST` request to return a response from OpenAI back to Unity; calls the `post()` method
+3. `PUT` request to update the `GameSession` object; calls the `put()` method
+4. `DELETE` request to remove a `GameSession` object, cascading to the `AIResponse` object; calls the `delete()` method
 
 Django REST framework automatically works with a specific naming convention for methods like get, post, put, and delete to map incoming HTTP requests to the appropriate method within the view.
 
