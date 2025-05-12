@@ -21,6 +21,7 @@ migrate() {
 
 # Main function
 main() {
+    cd casino_simulator_api
     if make_migrations; then
         migrate
     else

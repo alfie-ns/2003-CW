@@ -8,20 +8,23 @@ print_bold() {
 }
 
 create_venv() { # ! -d checks if given directory does NOT exist
+    cd casino_simulator_api
     if [ ! -d "venv" ]; then
         print_bold "\nCreating virtual environment...\n"
         python3 -m venv venv
         source venv/bin/activate
-        pip install -r requirements.txt
         pip install --upgrade pip
+        pip install -r requirements.txt
     else
         print_bold "Virtual environment already exists. Activating..."
         source venv/bin/activate
     fi
+    cd ..
 }
 
 # Function to run the server
 run_server() {
+    cd casino_simulator_api
     print_bold "Running the server...\n"
     python3 manage.py runserver || print_bold "Failed to run the server" # if command fails print message
     #python manage.py runserver 0.0.0.0:8000
@@ -29,7 +32,7 @@ run_server() {
 
 # Function to migrate before running the server
 migrate() {
-    bash ../scripts/migrate.sh
+    bash scripts/migrate.sh
 }
 
 # Main function 
